@@ -1,7 +1,1 @@
-dependencies installed 
-
- npm i axios moment react-syntax-highlighter react-hot-toast react-icons react-router-dom clsx react-markdown react-share recharts remark-gfm
-
- #Tailwind css implemented by following the doc steps
-
- #google font implement by visiting google font site and selecting urbanist implementing it in index.vss file with other styling.
+Creating project structures files and folders
