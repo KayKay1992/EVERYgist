@@ -1,1 +1,21 @@
-Creating project structures files and folders
+Defining our App's route
+
+
+I added the following routes to the App.jsx file:
+
+* / : This is the default route which renders the BlogLandingPage component.
+* /:slug : This route renders the BlogpostView component and passes the slug of the blog post as a parameter.
+* /tag/:tagName : This route renders the PostByTags component and passes the tag name as a parameter.
+* /search : This route renders the SearchPosts component.
+
+I also created a PrivateRoutes.jsx file which contains a PrivateRoutes component. This component is used to protect the admin routes from unauthorized access. The component uses the Outlet component from react-router-dom to render the routes that are passed as a child to it.
+
+The routes that are protected by the PrivateRoutes component are:
+
+* /admin/dashboard : This route renders the Dashboard component.
+* /admin/posts : This route renders the BlogPosts component.
+* /admin/create : This route renders the BlogPostEditor component.
+* /admin/edit/:postSlug : This route renders the BlogPostEditor component and passes the slug of the blog post as a parameter.
+* /admin/comments : This route renders the Comments component.
+
+The PrivateRoutes component is used in the App.jsx file to protect the admin routes. It is passed as a child to the Routes component and is used to render the protected routes.
