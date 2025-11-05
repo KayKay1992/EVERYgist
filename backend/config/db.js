@@ -12,7 +12,7 @@ const connectDB = async () => {
   try {
     await mongoose.connect(uri, {
       // Fail fast if cluster/host is unreachable
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
     });
     const { host, name } = mongoose.connection;
     console.log(`MongoDB connected successfully`);

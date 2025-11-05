@@ -7,7 +7,7 @@ const path = require('path');
 //routes
 // const blogPostRoutes = require('./routes/blogPosts');
 // const commentRoutes = require('./routes/comments');
-// const authRoutes = require('./routes/auth');
+const authRoutes = require('./routes/authRoutes');
 // const dashboardRoutes = require('./routes/dashboard');
 // const aiRoutes = require('./routes/ai');
 
@@ -30,7 +30,7 @@ app.use(express.json());
 // Routes
 // app.use('/api/posts', blogPostRoutes);
 // app.use('/api/comments', commentRoutes);
-// app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 // app.use('/api/dashboard', dashboardRoutes);
 // app.use('/api/ai', aiRoutes);
 
@@ -38,5 +38,5 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {}));
 
 // Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));

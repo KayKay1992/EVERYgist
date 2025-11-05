@@ -1,54 +1,127 @@
-Connecting to mongoDB
+Creating Authentication APIs (Register, Login and user Profile)
 
-testeed and mongodb connected successfully.
+run this command to generate jwt token and use it in your .env file.  node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+i used Insomnia to test the apis.
 
 ===============================================================================
-MongoDB Connection Setup – Files Changed and Explanation
-Generated: October 31, 2025
+Authentication APIs — Changed Files Explanation
+Generated: November 01, 2025
 ===============================================================================
 
-1) backend/.env
-----------------
-- MONGO_URI set to a valid MongoDB Atlas SRV connection string:
-	- Password special character '@' is URL-encoded as '%40'.
-	- Target database set to 'everygist'.
-	- Added standard options: retryWrites=true, w=majority, appName=GistHub.
-- PORT updated to 5000 (server listens on this port).
+Files changed:
+- backend/controllers/authController.js
+- backend/routes/authRoutes.js
+- backend/middleware/authMiddleware.js
+- backend/middleware/uploadMiddleware.js
+- backend/server.js
+- backend/.env
 
-Why: The previous URI failed DNS/SRV resolution due to an unencoded '@' in the password and a malformed host segment. Encoding and correcting the URI fixed ENOTFOUND.
+Summary
+-------
+You implemented registration, login and profile endpoints plus an image upload endpoint. The changes add authentication flows (JWT issuance and verification), file upload handling via multer, route registration in the server, and environment variables for JWT and admin access.
 
-2) backend/config/db.js
------------------------
-- Reads MONGO_URI from the environment and exits early if missing.
-- Uses mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 }) to fail fast when cluster is unreachable.
-- Logs a clear success message on connection.
-- On error, prints the message and a helpful hint if ENOTFOUND occurs (typically a bad host or unencoded credentials), then exits the process.
+Detailed per-file explanation
+-----------------------------
 
-Why: Adds resilience and clearer diagnostics for common connection issues.
+1) backend/controllers/authController.js
+----------------------------------------
+- registerUser(req, res):
+	* Validates required fields (name, email, password).
+	* Checks for an existing user with the same email and returns 400 if so.
+	* Hashes the password using bcrypt (salt rounds = 10).
+	* Determines role = 'admin' when `adminAccessToken` matches `process.env.ADMIN_ACCESS_TOKEN`, otherwise 'member'.
+	* Creates a new User document and returns 201 with user info and a JWT token.
 
-3) backend/server.js
+- loginUser(req, res):
+	* Finds the user by email and verifies the password using bcrypt.compare.
+	* Returns user info and a JWT token on success.
+	* Returns a 500 status in current code for invalid credentials — consider changing to 401/400 for clarity.
+
+- getUserProfile(req, res):
+	* Protected action; looks up the user by ID (attached by middleware) and returns the user without the password.
+
+Notes & Recommendations:
+- Use consistent and proper status codes: 401 for unauthorized, 400 for bad request, 201 for created.
+- Consider making `password` `select: false` in the User model and adding an instance method to compare passwords.
+- Add input validation (email format, password strength) and sanitize fields.
+
+
+2) backend/routes/authRoutes.js
+--------------------------------
+- Registers the following routes on an Express router:
+	* POST /register → registerUser
+	* POST /login → loginUser
+	* GET /profile → protect middleware → getUserProfile
+	* POST /upload-image → upload.single('image') → returns imageUrl
+
+Notes:
+- The upload endpoint uses the `upload` middleware that stores files into `uploads/` and returns a fully qualified URL.
+
+
+3) backend/middleware/authMiddleware.js
+---------------------------------------
+- protect middleware:
+	* Reads the Authorization header expecting "Bearer <token>".
+	* Verifies token with `process.env.JWT_SECRET` and decodes the user ID.
+	* Loads the user from DB (without password) and attaches it to `req.user`.
+	* Returns 401 on missing/invalid/expired token.
+
+Notes:
+- Good standard JWT flow. Consider caching user lookups if performance becomes an issue.
+
+
+4) backend/middleware/uploadMiddleware.js
+-----------------------------------------
+- Configures multer with diskStorage to save uploads to `uploads/`.
+- Filenames are prefixed with a timestamp to avoid collisions.
+- File filter restricts to common image types (jpeg, png, gif).
+
+Notes:
+- Consider size limits and a separate upload folder per environment.
+- In production, consider object storage (S3, Cloud Storage) instead of disk.
+
+
+5) backend/server.js
 --------------------
-- Loads environment variables with dotenv.
-- Initializes an Express app and configures CORS (open origin for now; adjust for production).
-- Calls connectDB() to establish the MongoDB connection before handling requests.
-- Parses JSON request bodies with express.json().
-- Serves '/uploads' as a static directory.
-- Starts the HTTP server using PORT from .env (defaults to 5000 if unset).
-- Route imports are scaffolded (commented) and ready to be enabled when implemented.
+- Loads `.env`, connects to MongoDB (via `connectDB()`), configures CORS (open origin currently), and mounts routes at `/api/auth`.
+- Serves `uploads/` statically.
+- Starts the server on `process.env.PORT || 8000`.
 
-Why: Provides a clean startup sequence (env → DB → middleware → routes → server) and a predictable development port.
+Notes:
+- Ensure CORS is tightened for production.
+- Consider adding centralized error handling and request logging (morgan).
 
-Verification
-------------
-- Running the dev server shows:
-	- "Server started on port 5000"
-	- "MongoDB connected successfully"
-- Confirms the connection string and startup pipeline are working.
 
-Next Suggestions (optional)
----------------------------
-- Restrict CORS origins to your frontend domain(s).
-- Add a health endpoint (GET /health) that returns DB status.
-- Enable route files and add basic 404/error handlers.
-- In db.js, optionally log the connected host/db for visibility.
+6) backend/.env
+----------------
+- New env variables added/used:
+	* MONGO_URI — Atlas connection string (encoded password)
+	* JWT_SECRET — 128-hex char string used to sign JWTs
+	* PORT — server listening port
+	* ADMIN_ACCESS_TOKEN — simple token to allow admin role assignment during registration
+
+Security note: Keep `.env` out of source control (already in .gitignore). For production, use a secrets manager.
+
+
+Verification & Manual Testing
+-----------------------------
+- You reported testing via Insomnia and the server logs show MongoDB connection success.
+- To test endpoints manually:
+	* Register: POST /api/auth/register (body: name, email, password)
+	* Login: POST /api/auth/login (body: email, password)
+	* Profile: GET /api/auth/profile with header `Authorization: Bearer <token>` returned from login/register
+	* Upload image: POST /api/auth/upload-image (form-data with key `image`)
+
+
+Next steps (suggestions)
+-----------------------
+- Replace 500 responses for invalid creds with 401 Unauthorized.
+- Hide password field in the User schema and add a comparePassword method.
+- Add input validation and sanitization.
+- Add tests and a Postman/Insomnia collection for automated testing.
+- Move uploads to object storage for production.
+
+===============================================================================
+Change summary added above. Let me know if you want me to apply small refactors (status code fixes, password select: false, or add comparePassword) automatically.
 ===============================================================================
