@@ -5,7 +5,7 @@ const cors = require('cors');
 const path = require('path');
 
 //routes
-// const blogPostRoutes = require('./routes/blogPosts');
+const blogPostRoutes = require('./routes/blogPostRoutes');
 // const commentRoutes = require('./routes/comments');
 const authRoutes = require('./routes/authRoutes');
 // const dashboardRoutes = require('./routes/dashboard');
@@ -13,7 +13,6 @@ const authRoutes = require('./routes/authRoutes');
 
 
 const app = express();
-
 // Middleware to handle cors issues
 app.use(cors({
     origin: '*', // Allow all origins for simplicity; adjust as needed for security
@@ -28,11 +27,12 @@ connectDB();
 app.use(express.json());
 
 // Routes
-// app.use('/api/posts', blogPostRoutes);
+app.use('/api/posts', blogPostRoutes);
 // app.use('/api/comments', commentRoutes);
 app.use('/api/auth', authRoutes);
 // app.use('/api/dashboard', dashboardRoutes);
 // app.use('/api/ai', aiRoutes);
+
 
 //serve uploads folder as static
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {}));

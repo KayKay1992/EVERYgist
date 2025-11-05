@@ -9,21 +9,56 @@ const connectDB = async () => {
     process.exit(1);
   }
 
+  // Derive a safe log string without credentials
+  const safeUri = (() => {
+    try {
+      const match = uri.match(/^mongodb\+srv:\/\/(.*)@([^/?]+)(.*)$/);
+      return match
+        ? `mongodb+srv://<user>:<secret>@${match[2]}${match[3]}`
+        : "mongodb+srv://<redacted>";
+    } catch {
+      return "mongodb+srv://<redacted>";
+    }
+  })();
+
   try {
     await mongoose.connect(uri, {
-      // Fail fast if cluster/host is unreachable
-      serverSelectionTimeoutMS: 10000,
+      // Allow slower DNS/cluster spin-up
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      tls: true,
     });
     const { host, name } = mongoose.connection;
-    console.log(`MongoDB connected successfully`);
+    console.log('MongoDB connected successfully');
   } catch (error) {
     const message = error?.message || String(error);
     console.error("MongoDB connection failed:", message);
-    if (message.includes("ENOTFOUND")) {
+    // Targeted hints for common issues
+    if (
+      message.includes("getaddrinfo ENOTFOUND") ||
+      message.includes("ENOTFOUND")
+    ) {
       console.error(
-        "Hint: Check MONGO_URI host and URL-encode special characters in username/password (use %40 for @ in passwords)."
+        "Hint: DNS could not resolve your cluster host. Verify the SRV host in your MONGO_URI and try adding your DNS/Network allows. On some Windows setups, temporarily switching networks or forcing IPv4 can help."
+      );
+    } else if (
+      message.includes("ETIMEDOUT") ||
+      message.includes("server selection timed out")
+    ) {
+      console.error(
+        "Hint: Network timeout reaching Atlas. Ensure outbound access on ports 27017-27019 is allowed and that your Atlas cluster is in 'Available' state."
+      );
+    } else if (
+      message.toLowerCase().includes("authentication") ||
+      message.toLowerCase().includes("auth")
+    ) {
+      console.error(
+        "Hint: Authentication failed. Confirm your username/password and that special characters are URL-encoded (e.g., @ -> %40). Also verify the user has access to the 'everygist' database."
       );
     }
+    console.error(`MONGO_URI (sanitized): ${safeUri}`);
     process.exit(1);
   }
 };
