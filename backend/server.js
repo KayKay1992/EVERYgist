@@ -6,7 +6,7 @@ const path = require('path');
 
 //routes
 const blogPostRoutes = require('./routes/blogPostRoutes');
-// const commentRoutes = require('./routes/comments');
+const commentRoutes = require('./routes/commentRoutes');
 const authRoutes = require('./routes/authRoutes');
 // const dashboardRoutes = require('./routes/dashboard');
 // const aiRoutes = require('./routes/ai');
@@ -28,7 +28,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/posts', blogPostRoutes);
-// app.use('/api/comments', commentRoutes);
+app.use('/api/comments', commentRoutes);
 app.use('/api/auth', authRoutes);
 // app.use('/api/dashboard', dashboardRoutes);
 // app.use('/api/ai', aiRoutes);
