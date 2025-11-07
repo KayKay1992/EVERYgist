@@ -1,97 +1,46 @@
-    Definning API paths
+Creating Axios Instance and uploadImage functionality
 
-## API Paths Implementation Explanation (Frontend)
+## Axios Instance and uploadImage — Implementation Explanation
 
-### Overview
-You created a centralized API configuration file (`apiPaths.js`) that defines all backend endpoints in one place. This makes your frontend API calls consistent, easy to maintain, and prevents typos or hardcoded URLs scattered across components.
+Overview
+- You created a reusable Axios instance for frontend HTTP requests and a small utility to upload images to the backend. Centralizing Axios configuration keeps headers, base URL, and interceptors consistent across the app.
 
-### Structure
+Files involved
+- `frontend/gist_hub/src/utils/axioInstance.js` (or similarly named) — Axios instance configuration
+- `frontend/gist_hub/src/utils/uploadImage.js` — helper that uploads images with multipart/form-data
 
-**BASE_URL**
-- `http://localhost:8000` - Your backend server address
-- Change this to production URL when deploying (e.g., `https://api.yourapp.com`)
+Axios instance (what it does)
+- Sets `BASE_URL` to `http://localhost:8000` so all requests are relative to your backend.
+- Applies default headers such as `Content-Type: application/json` for normal requests.
+- Optionally attaches an Authorization header from localStorage (or user context) so protected routes use the JWT automatically.
+- Adds response/request interceptors for centralized error handling (e.g., auto-logout on 401) and to show loading indicators if desired.
 
-**API_PATHS Object**
-Organized by feature area with clear comments for each endpoint:
+uploadImage utility (how it works)
+- Accepts a File object (from an `<input type="file">`), builds a `FormData` instance, and appends the file under the expected key, for example `image`.
+- Uses the Axios instance to POST the form to `BASE_URL + API_PATHS.IMAGE.UPLOAD_IMAGE` (`/api/auth/upload-image`).
+- Sets the request header `Content-Type` to `multipart/form-data`; when using Axios with FormData, you can let Axios set the boundary automatically by not specifying a content-type or using `headers: { 'Content-Type': 'multipart/form-data' }`.
+- On success, the backend returns the uploaded image URL/path; the utility resolves with that URL so calling components can save it to user profile or include it in a post.
 
-1. **AUTH** - Authentication endpoints
-   - `REGISTER`: `/api/auth/register` - User signup
-   - `LOGIN`: `/api/auth/login` - User login
-   - `GET_PROFILE`: `/api/auth/profile` - Fetch current user profile
+Example usage in a component
+1. User selects a file via a file input.
+2. Component calls `const imageUrl = await uploadImage(file);`
+3. On success, update the user profile or include `imageUrl` in the request body for creating/updating a post.
 
-2. **IMAGE** - Image upload
-   - `UPLOAD_IMAGE`: `/api/auth/upload-image` - Upload profile image via multipart form
+Error handling and UX
+- The utility catches Axios errors and returns a helpful message (network error, file too large, unsupported type).
+- The frontend should show feedback (toast/snackbar) for success or failure.
 
-3. **DASHBOARD** - Admin dashboard
-   - `GET_DASHBOARD_DATA`: `/api/dashboard-summary` - Fetch dashboard stats (posts, comments, views, etc.)
+Security and best practices
+- Validate file type and size client-side before sending (e.g., allow images only, limit to a few MB).
+- Keep the upload endpoint protected (only authenticated users can upload profile images).
+- Serve uploaded files from a static `/uploads` route on the backend and store only the path/URL in DB.
 
-4. **AI** - AI-powered content generation
-   - `GENERATE_BLOG_POST`: `/api/ai/generate` - Generate full blog post from title + tone
-   - `GENERATE_BLOG_POST_IDEAS`: `/api/ai/generate-ideas` - Get 5 blog ideas for a topic
-   - `GENERATE_COMMENT_REPLY`: `/api/ai/generate-reply` - AI-generated comment reply
-   - `GENERATE_POST_SUMMARY`: `/api/ai/generate-summary` - Generate title + summary + key takeaways
+Why this helps
+- Centralized Axios + upload helper reduces duplication and mistakes.
+- Makes adding auth headers and global error handling trivial.
+- Simplifies components: they only call `uploadImage` and receive a URL back.
 
-5. **POSTS** - Blog post CRUD and features
-   - `GET_ALL`: `/api/posts` - List all posts (supports ?status=published|draft&page=1)
-   - `CREATE_POST`: `/api/posts` - Create new post
-   - `UPDATE(id)`: `/api/posts/${id}` - Update post by ID (dynamic function)
-   - `DELETE(id)`: `/api/posts/${id}` - Delete post by ID
-   - `GET_BY_SLUG(slug)`: `/api/posts/slug/${slug}` - Get single post by slug
-   - `GET_BY_TAG(tag)`: `/api/posts/tag/${tag}` - Filter posts by tag
-   - `SEARCH`: `/api/posts/search` - Search posts by keyword
-   - `GET_TRENDING_POSTS`: `/api/posts/trending` - Top 5 posts by views/likes
-   - `INCREMENT_VIEW(id)`: `/api/posts/${id}/view` - Increment view count
-   - `LIKE_POST(id)`: `/api/posts/${id}/like` - Like a post (requires auth)
-
-6. **COMMENTS** - Comment management
-   - `ADD(postId)`: `/api/comments/${postId}` - Add comment to a post
-   - `GET_ALL_BY_POST(postId)`: `/api/comments/${postId}` - Get comments for a post
-   - `GET_ALL`: `/api/comments` - Get all comments (admin view)
-   - `DELETE(commentId)`: `/api/comments/${commentId}` - Delete comment by ID
-
-### How to Use in Components
-
-**Import in your components:**
-```javascript
-import { BASE_URL, API_PATHS } from '../utils/apiPaths';
-```
-
-**Example: Login request**
-```javascript
-const response = await axios.post(
-  BASE_URL + API_PATHS.AUTH.LOGIN,
-  { email, password }
-);
-```
-
-**Example: Get post by slug**
-```javascript
-const slug = 'getting-started-with-react';
-const url = BASE_URL + API_PATHS.POSTS.GET_BY_SLUG(slug);
-const response = await axios.get(url);
-```
-
-**Example: Like a post**
-```javascript
-const postId = '507f1f77bcf86cd799439011';
-const url = BASE_URL + API_PATHS.POSTS.LIKE_POST(postId);
-await axios.post(url, {}, {
-  headers: { Authorization: `Bearer ${token}` }
-});
-```
-
-### Benefits
-
-1. **Single Source of Truth** - All endpoints defined in one file
-2. **Easy Updates** - Change BASE_URL or endpoint paths in one place
-3. **No Typos** - Autocomplete helps catch mistakes
-4. **Clear Documentation** - Comments explain each endpoint's purpose
-5. **Dynamic Routes** - Functions like `UPDATE(id)` build paths with parameters
-6. **Readable Code** - `API_PATHS.AUTH.LOGIN` is clearer than hardcoded strings
-
-### Notes
-
-- All endpoints match your backend routes exactly
-- Dynamic functions (with `(id)` or `(slug)`) take parameters and return the full path
-- Protected routes (like CREATE_POST, LIKE_POST) require JWT token in Authorization header
-- When deploying, update BASE_URL to your production backend domain
+Next steps (optional)
+- Add a progress indicator by using Axios `onUploadProgress` to show upload percentage.
+- Add client-side image resizing/compression to save bandwidth.
+- Add server-side validation and virus scanning for uploaded files.
