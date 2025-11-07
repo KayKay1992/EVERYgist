@@ -1,46 +1,56 @@
-Creating Axios Instance and uploadImage functionality
+Creating userContext 
 
-## Axios Instance and uploadImage — Implementation Explanation
+## User Context (Auth) and Admin Login — Implementation Explanation
 
-Overview
-- You created a reusable Axios instance for frontend HTTP requests and a small utility to upload images to the backend. Centralizing Axios configuration keeps headers, base URL, and interceptors consistent across the app.
+User Context (`frontend/gist_hub/src/context/userContext.jsx`)
+- Purpose: Provide a global, React Context–based auth state so any component can read the current user, loading state, and call login/logout helpers without prop drilling.
 
-Files involved
-- `frontend/gist_hub/src/utils/axioInstance.js` (or similarly named) — Axios instance configuration
-- `frontend/gist_hub/src/utils/uploadImage.js` — helper that uploads images with multipart/form-data
+What it stores
+- `user`: the authenticated user object (null if not logged in)
+- `loading`: true while checking stored token and fetching the profile
+- `openAuthForm`: UI flag for toggling an auth modal/sheet
 
-Axios instance (what it does)
-- Sets `BASE_URL` to `http://localhost:8000` so all requests are relative to your backend.
-- Applies default headers such as `Content-Type: application/json` for normal requests.
-- Optionally attaches an Authorization header from localStorage (or user context) so protected routes use the JWT automatically.
-- Adds response/request interceptors for centralized error handling (e.g., auto-logout on 401) and to show loading indicators if desired.
+How it initializes (auto-login)
+- On mount, it looks for a `token` in `localStorage`.
+- If found, it calls `GET /api/auth/profile` using the shared Axios instance (`axiosInstance`) and `API_PATHS.AUTH.GET_PROFILE`.
+- On success, it sets `user` with the response and flips `loading` to false.
+- If no token or the request fails, it stops loading and leaves `user` as null.
 
-uploadImage utility (how it works)
-- Accepts a File object (from an `<input type="file">`), builds a `FormData` instance, and appends the file under the expected key, for example `image`.
-- Uses the Axios instance to POST the form to `BASE_URL + API_PATHS.IMAGE.UPLOAD_IMAGE` (`/api/auth/upload-image`).
-- Sets the request header `Content-Type` to `multipart/form-data`; when using Axios with FormData, you can let Axios set the boundary automatically by not specifying a content-type or using `headers: { 'Content-Type': 'multipart/form-data' }`.
-- On success, the backend returns the uploaded image URL/path; the utility resolves with that URL so calling components can save it to user profile or include it in a post.
+Helpers exposed
+- `updateUser(userData)`: saves the user object to state and persists `userData.token` to `localStorage` (enables subsequent authenticated calls).
+- `clearUser()`: clears `user`, removes the token from `localStorage` (logs out). Note: there is a stray `setSearchResults([])` call that isn’t defined in this file—safe to remove or wire it to actual search state.
+- `openAuthForm` / `setOpenAuthForm`: lets the UI open/close auth UI.
 
-Example usage in a component
-1. User selects a file via a file input.
-2. Component calls `const imageUrl = await uploadImage(file);`
-3. On success, update the user profile or include `imageUrl` in the request body for creating/updating a post.
+How other components use it
+- Wrap your app in `<UserProvider>` (usually in `main.jsx` or at the root of `App.jsx`).
+- Inside components, use `const { user, loading, updateUser, clearUser } = useContext(UserContext);`
+- After a successful login/register response, call `updateUser({ ...response.data, token })` to store the token and user, then navigate to protected screens.
 
-Error handling and UX
-- The utility catches Axios errors and returns a helpful message (network error, file too large, unsupported type).
-- The frontend should show feedback (toast/snackbar) for success or failure.
+Integration details
+- Requests go through your `axiosInstance`, which centralizes `BASE_URL`, headers, and any interceptors (e.g., attaching `Authorization: Bearer <token>`). That’s why fetching `/api/auth/profile` works automatically once the token is saved.
 
-Security and best practices
-- Validate file type and size client-side before sending (e.g., allow images only, limit to a few MB).
-- Keep the upload endpoint protected (only authenticated users can upload profile images).
-- Serve uploaded files from a static `/uploads` route on the backend and store only the path/URL in DB.
+Admin Login Page (`frontend/gist_hub/src/pages/Admin/AdminLogin.jsx`)
+- Purpose: Simple auth screen that switches between Login and SignUp views.
+- UI structure:
+	- Header bar with logo.
+	- Centered card that conditionally renders either `<Login />` or `<SignUp />` based on `currentPage`.
+- State flow:
+	- `currentPage` state toggles between `'login'` and `'signup'`.
+	- The setter `setCurrentPage` is passed to the child forms so they can switch views (e.g., “Don’t have an account? Sign up”).
 
-Why this helps
-- Centralized Axios + upload helper reduces duplication and mistakes.
-- Makes adding auth headers and global error handling trivial.
-- Simplifies components: they only call `uploadImage` and receive a URL back.
+How this ties together
+- The Login/SignUp forms (in `components/Auth/`) should call the backend:
+	- Login → `POST /api/auth/login`
+	- Register → `POST /api/auth/register`
+- On success, they should call `updateUser` from `UserContext` with the returned token and user.
+- After `updateUser`, redirect to the admin dashboard page.
 
-Next steps (optional)
-- Add a progress indicator by using Axios `onUploadProgress` to show upload percentage.
-- Add client-side image resizing/compression to save bandwidth.
-- Add server-side validation and virus scanning for uploaded files.
+Notes and quick fixes
+- Remove or define `setSearchResults([])` inside `clearUser` to avoid runtime errors.
+- Ensure `<Login />` and `<SignUp />` are imported in `AdminLogin.jsx` and accept `setCurrentPage` as a prop.
+- If protected admin routes are used, gate them with a PrivateRoute that reads `user` from `UserContext`.
+
+Optional enhancements
+- Add an Axios response interceptor to auto-logout on 401 and call `clearUser()`.
+- Persist `user` (not just token) in storage to avoid a profile fetch on every reload, or implement a light cache with revalidation.
+- Use a refresh token flow for longer sessions and better security.
