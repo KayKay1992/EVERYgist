@@ -1,145 +1,97 @@
-Creating AI APIs (Generate Blog Post, Blog Ideas, Comment Reply)
+    Definning API paths
 
-created my gemini_key from the site https://aistudio.google.com/api-keys
-
-## AI APIs Implementation Explanation
+## API Paths Implementation Explanation (Frontend)
 
 ### Overview
-You implemented 4 AI-powered endpoints that use Google's Gemini AI (gemini-2.0-flash-lite model) to help content creators with blog writing tasks. All endpoints require authentication (protected by JWT middleware).
+You created a centralized API configuration file (`apiPaths.js`) that defines all backend endpoints in one place. This makes your frontend API calls consistent, easy to maintain, and prevents typos or hardcoded URLs scattered across components.
 
-### The Four AI Features
+### Structure
 
-1. **Generate Blog Post** (`POST /api/ai/generate`)
-   - Takes a title and tone (e.g., "casual", "formal", "technical")
-   - Creates a complete 1500-2000 word blog post with introduction, subheadings, examples, and conclusion
-   - Returns markdown-formatted content ready to publish
-   - Example: Send `{"title": "Getting Started with Node.js", "tone": "beginner-friendly"}`
+**BASE_URL**
+- `http://localhost:8000` - Your backend server address
+- Change this to production URL when deploying (e.g., `https://api.yourapp.com`)
 
-2. **Generate Blog Ideas** (`POST /api/ai/generate-ideas`)
-   - Takes a topic/keyword
-   - Returns 5 blog post ideas as JSON, each with:
-     - Catchy title
-     - Brief description
-     - 3 relevant tags
-     - Suggested word count
-     - Recommended tone
-   - Example: Send `{"topics": "web development"}`
-   - Response is cleaned and parsed JSON (removes markdown code blocks if AI adds them)
+**API_PATHS Object**
+Organized by feature area with clear comments for each endpoint:
 
-3. **Generate Comment Reply** (`POST /api/ai/generate-reply`)
-   - Takes comment author name and content
-   - Generates a thoughtful, respectful reply (50-200 words)
-   - Helps you respond to reader comments quickly
-   - Example: Send `{"author": "John", "content": "Great article! Can you explain more about async/await?"}`
+1. **AUTH** - Authentication endpoints
+   - `REGISTER`: `/api/auth/register` - User signup
+   - `LOGIN`: `/api/auth/login` - User login
+   - `GET_PROFILE`: `/api/auth/profile` - Fetch current user profile
 
-4. **Generate Post Summary** (`POST /api/ai/generate-summary`)
-   - Takes your full blog post content
-   - Creates:
-     - SEO-friendly title (max 12 words)
-     - 300-word engaging summary
-     - List of 3-5 key takeaways ("what you will learn")
-   - Returns structured JSON for meta descriptions and previews
-   - Example: Send `{"content": "Your long blog post text here..."}`
+2. **IMAGE** - Image upload
+   - `UPLOAD_IMAGE`: `/api/auth/upload-image` - Upload profile image via multipart form
 
-### How It Works Technically
+3. **DASHBOARD** - Admin dashboard
+   - `GET_DASHBOARD_DATA`: `/api/dashboard-summary` - Fetch dashboard stats (posts, comments, views, etc.)
 
-**Setup:**
-- Installed `@google/genai` package for Google's Generative AI SDK
-- Added `GOOGLE_API_KEY` to environment variables (from https://aistudio.google.com/api-keys)
-- Created `aiController.js` with 4 controller functions
-- Created `aiRoutes.js` to wire endpoints with `protect` middleware (requires logged-in user)
-- Created `utils/prompt.js` with reusable prompt templates
+4. **AI** - AI-powered content generation
+   - `GENERATE_BLOG_POST`: `/api/ai/generate` - Generate full blog post from title + tone
+   - `GENERATE_BLOG_POST_IDEAS`: `/api/ai/generate-ideas` - Get 5 blog ideas for a topic
+   - `GENERATE_COMMENT_REPLY`: `/api/ai/generate-reply` - AI-generated comment reply
+   - `GENERATE_POST_SUMMARY`: `/api/ai/generate-summary` - Generate title + summary + key takeaways
 
-**Prompt Engineering:**
-- Each AI function uses a carefully crafted prompt to get consistent results
-- Prompts include specific instructions (word count, format, tone, structure)
-- For JSON responses (ideas, summary), prompts explicitly ask for valid JSON without extra text
-- Clean the response by removing markdown code blocks (```json ... ```) before parsing
+5. **POSTS** - Blog post CRUD and features
+   - `GET_ALL`: `/api/posts` - List all posts (supports ?status=published|draft&page=1)
+   - `CREATE_POST`: `/api/posts` - Create new post
+   - `UPDATE(id)`: `/api/posts/${id}` - Update post by ID (dynamic function)
+   - `DELETE(id)`: `/api/posts/${id}` - Delete post by ID
+   - `GET_BY_SLUG(slug)`: `/api/posts/slug/${slug}` - Get single post by slug
+   - `GET_BY_TAG(tag)`: `/api/posts/tag/${tag}` - Filter posts by tag
+   - `SEARCH`: `/api/posts/search` - Search posts by keyword
+   - `GET_TRENDING_POSTS`: `/api/posts/trending` - Top 5 posts by views/likes
+   - `INCREMENT_VIEW(id)`: `/api/posts/${id}/view` - Increment view count
+   - `LIKE_POST(id)`: `/api/posts/${id}/like` - Like a post (requires auth)
 
-**Error Handling:**
-- Validates required fields (400 if missing)
-- Catches AI API failures and returns 500 with error message
-- For JSON endpoints, parses cleaned text safely
+6. **COMMENTS** - Comment management
+   - `ADD(postId)`: `/api/comments/${postId}` - Add comment to a post
+   - `GET_ALL_BY_POST(postId)`: `/api/comments/${postId}` - Get comments for a post
+   - `GET_ALL`: `/api/comments` - Get all comments (admin view)
+   - `DELETE(commentId)`: `/api/comments/${commentId}` - Delete comment by ID
 
-**Routes Mounted:**
-- All routes are under `/api/ai/` prefix (configured in `server.js`)
-- All routes require authentication via JWT token in `Authorization: Bearer <token>` header
+### How to Use in Components
 
-### Files Changed
-
-1. **backend/controllers/aiController.js** - Four controller functions that call Gemini AI
-2. **backend/routes/aiRoutes.js** - Route definitions with protect middleware
-3. **backend/utils/prompt.js** - Three prompt template functions
-4. **backend/server.js** - Added `app.use('/api/ai', aiRoutes);` to mount AI routes
-
-### How to Test
-
-**Prerequisites:**
-- Set `GOOGLE_API_KEY` in your `.env` or `.env.local` file
-- Register/login to get a valid JWT token
-
-**Example Request (Generate Blog Post):**
-```bash
-POST http://localhost:8000/api/ai/generate
-Headers: 
-  Content-Type: application/json
-  Authorization: Bearer <your-jwt-token>
-Body:
-{
-  "title": "Top 10 JavaScript Tips for Beginners",
-  "tone": "casual"
-}
+**Import in your components:**
+```javascript
+import { BASE_URL, API_PATHS } from '../utils/apiPaths';
 ```
 
-**Example Request (Generate Ideas):**
-```bash
-POST http://localhost:8000/api/ai/generate-ideas
-Headers: 
-  Content-Type: application/json
-  Authorization: Bearer <your-jwt-token>
-Body:
-{
-  "topics": "machine learning"
-}
+**Example: Login request**
+```javascript
+const response = await axios.post(
+  BASE_URL + API_PATHS.AUTH.LOGIN,
+  { email, password }
+);
 ```
 
-**Example Request (Generate Reply):**
-```bash
-POST http://localhost:8000/api/ai/generate-reply
-Headers: 
-  Content-Type: application/json
-  Authorization: Bearer <your-jwt-token>
-Body:
-{
-  "author": "Sarah",
-  "content": "This was super helpful! Do you have more resources on this?"
-}
+**Example: Get post by slug**
+```javascript
+const slug = 'getting-started-with-react';
+const url = BASE_URL + API_PATHS.POSTS.GET_BY_SLUG(slug);
+const response = await axios.get(url);
 ```
 
-**Example Request (Generate Summary):**
-```bash
-POST http://localhost:8000/api/ai/generate-summary
-Headers: 
-  Content-Type: application/json
-  Authorization: Bearer <your-jwt-token>
-Body:
-{
-  "content": "Your full blog post content goes here..."
-}
+**Example: Like a post**
+```javascript
+const postId = '507f1f77bcf86cd799439011';
+const url = BASE_URL + API_PATHS.POSTS.LIKE_POST(postId);
+await axios.post(url, {}, {
+  headers: { Authorization: `Bearer ${token}` }
+});
 ```
 
-### Key Benefits
+### Benefits
 
-- **Speed:** Generate complete blog posts in seconds instead of hours
-- **Consistency:** AI maintains tone and structure across content
-- **Ideas:** Never run out of blog topics
-- **Engagement:** Quick, thoughtful comment replies keep readers engaged
-- **SEO:** Auto-generated summaries and titles optimized for search
+1. **Single Source of Truth** - All endpoints defined in one file
+2. **Easy Updates** - Change BASE_URL or endpoint paths in one place
+3. **No Typos** - Autocomplete helps catch mistakes
+4. **Clear Documentation** - Comments explain each endpoint's purpose
+5. **Dynamic Routes** - Functions like `UPDATE(id)` build paths with parameters
+6. **Readable Code** - `API_PATHS.AUTH.LOGIN` is clearer than hardcoded strings
 
 ### Notes
 
-- The AI model used is `gemini-2.0-flash-lite` (fast and cost-effective)
-- All endpoints return 500 if the AI API fails (network issues, invalid API key, rate limits)
-- JSON responses are automatically cleaned (removes markdown code fences)
-- Comment replies include the author's name for personalization
-- Blog post generation creates markdown content with proper headings
+- All endpoints match your backend routes exactly
+- Dynamic functions (with `(id)` or `(slug)`) take parameters and return the full path
+- Protected routes (like CREATE_POST, LIKE_POST) require JWT token in Authorization header
+- When deploying, update BASE_URL to your production backend domain
