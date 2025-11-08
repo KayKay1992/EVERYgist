@@ -10,3 +10,8 @@ export const getInitials = (title) => {
 
   return initials.toUpperCase();
 };
+
+export const validateEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email).toLowerCase());
+};

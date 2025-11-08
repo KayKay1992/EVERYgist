@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 import LOGO from "../../assets/logo.svg";
+import Login from "../../components/Auth/Login";
+import SignUp from "../../components/Auth/SignUp";
 
 const AdminLogin = () => {
   const [currentPage, setCurrentPage] = useState('login')
@@ -8,7 +10,7 @@ const AdminLogin = () => {
     <>
       <div className="bg-white py-5 border-b border-gray-50">
         <div className="container mx-auto">
-          <img src={LOGO} alt="logo" className="h-[26px]" />
+          <img src={LOGO} alt="logo" className="h-[26px] pl-6" />
         </div>
       </div>
 

@@ -64,7 +64,7 @@
 }
 
 .btn-primary {
-  @apply w-full flex items-center justify-center gap-3 text-sm font-semibold text-white bg-linear-to-r from-sky-500 to-cyan-400 p-[100px] rounded-md my-1 transition-all hover:scale-[1.01] hover:text-white cursor-pointer;
+  @apply w-full flex items-center justify-center gap-3 text-sm font-semibold text-white bg-linear-to-r from-sky-500 to-cyan-400 p-2.5 rounded-md my-1 transition-all hover:scale-[1.01] hover:text-white cursor-pointer;
 }
 
 .btn-small {
