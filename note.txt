@@ -1,109 +1,60 @@
-Creating SignUp Component
+Profile Image Upload Component
 
-## SignUp Component Implementation Explanation
+## Profile Image Upload — Step-by-step Implementation
 
-File: `frontend/gist_hub/src/components/Auth/SignUp.jsx`
+1) Frontend UI (picker + preview)
+- File: `frontend/gist_hub/src/components/Inputs/ProfilePhotoSelector.jsx`
+- You built a small, reusable component that:
+	- Opens the OS file picker (accepts `image/*`).
+	- Stores the selected File in parent state via `setImage(file)`.
+	- Generates a temporary preview using `URL.createObjectURL(file)` so the user sees the selected image before uploading.
+	- Lets users remove the selected image (clears both preview and File state).
 
-Purpose
-- Provide a registration form for new users to create accounts with optional admin access token for admin role assignment.
+2) Hooked it into SignUp
+- File: `frontend/gist_hub/src/components/Auth/SignUp.jsx`
+- Added `<ProfilePhotoSelector image={profilePic} setImage={setProfilePic} />` above the form fields.
+- On submit (`handleSignUp`):
+	- Validates full name, email, password.
+	- If `profilePic` is present, uploads the file first to get a URL.
+	- Sends the signup payload along with `profileImageUrl` to `/api/auth/register`.
+	- Saves the returned token, updates `UserContext`, and navigates based on role.
 
-Key Features
-1. Form Fields (Controlled Inputs)
-   - `fullName`: User's full name
-   - `email`: User email address
-   - `password`: Account password
-   - `adminAccessToken`: Optional field for admin registration (validated by backend)
-   - `profilePic`: State reserved for future profile picture upload (not yet wired)
+3) Upload helper (FormData + Axios)
+- File: `frontend/gist_hub/src/utils/uploadImage.js`
+- Creates `FormData` and appends the File under the key `image` (must match backend middleware).
+- Posts to `BASE_URL + /api/auth/upload-image` using Axios.
+- Important: Sends `multipart/form-data` headers so the server parses the file correctly.
+- Added debug logs to verify the File object and FormData entries during testing.
 
-2. Validation
-   - Checks fullName is not empty
-   - Uses `validateEmail()` helper to verify proper email format
-   - Validates password is provided
-   - All checks happen client-side before API call
+4) Backend route and middleware
+- Route: `backend/routes/authRoutes.js` → `POST /api/auth/upload-image`
+- Middleware: `backend/middleware/uploadMiddleware.js` (multer)
+- What it does:
+	- Uses `multer.diskStorage` to save files into `backend/uploads/`.
+	- Uses a filename like `${Date.now()}-originalName` to avoid collisions.
+	- Restricts uploads to image mimetypes: jpeg/jpg/png/gif.
+	- Returns a public `imageUrl` like `http://localhost:8000/uploads/<filename>`.
+- Fix applied: switched the destination to an absolute path with `path.join(__dirname, '../uploads/')` so it works regardless of CWD.
 
-3. Context Integration
-   - Uses `UserContext` to access `updateUser` (stores user + token) and `setOpenAuthForm` (closes auth modal)
-   - Uses `useNavigate()` for post-signup redirection
+5) Serving uploaded files
+- In `backend/server.js`, the `/uploads` folder is exposed via `express.static`, so the returned `imageUrl` is immediately viewable in the browser.
 
-4. Admin Role Logic
-   - If user provides `adminAccessToken`, backend validates it against `ADMIN_ACCESS_TOKEN` env variable
-   - Matching token grants `role: "admin"`, otherwise `role: "member"`
-   - This allows both regular users and admins to register through the same form
+6) Debugging the errors you fixed
+- 500 → 400 progression:
+	- 500 (Internal Server Error) was resolved by fixing the multer destination to an absolute path.
+	- 400 (Bad Request: No file uploaded) was due to FormData/headers; fixed by ensuring Axios sends `multipart/form-data` and that the key name is exactly `image`.
+- Typo fix: `constresponse` → `const response` in `uploadImage.js`.
+- Missing import: added `import uploadImage from "../../utils/uploadImage";` in `SignUp.jsx`.
+- Extra polish: added console logs to confirm the File and FormData contents during troubleshooting.
 
-5. API Call Flow (Currently Incomplete)
-   - Form submit calls `handleSignUp`
-   - Validates all required fields
-   - Should POST to `API_PATHS.AUTH.REGISTER` with: `{ name: fullName, email, password, adminAccessToken }`
-   - Backend returns `{ token, role, ...user }`
-   - Calls `updateUser(response.data)` to save token + user to context/localStorage
-   - Closes auth form and redirects based on role (admin → dashboard, member → home)
+7) Final data flow
+- User selects a file → `ProfilePhotoSelector` updates `profilePic`.
+- Submit → `uploadImage(profilePic)` → server stores file → returns `imageUrl`.
+- Signup request includes `{ profileImageUrl: imageUrl }` → backend saves it to the user.
+- App stores token in localStorage, updates context, and navigates to the correct page.
 
-6. Error Handling
-   - Displays inline error messages above the submit button
-   - Handles both API errors (structured messages) and generic network errors
-
-7. UI & Responsive Design
-   - Two-column layout on medium+ screens (`md:grid-cols-2`)
-   - Single column on mobile (`grid-cols-1`)
-   - Form container: `w-[90vw]` on small screens, `w-[43vw]` on medium+
-   - Side image (`AUTH_IMG`) hidden on small screens (`hidden md:block`)
-   - Fixed height container (`h-[520px]`) keeps layout consistent
-
-8. Switching to Login
-   - "Already have an account? Log In" button calls `setCurrentPage('login')` to swap views in parent `AdminLogin` component
-
-Files Involved
-- `SignUp.jsx` (this component)
-- `UserContext` for global auth state
-- `axiosInstance` for HTTP requests
-- `apiPaths.js` for endpoint constants
-- `helper.js` for `validateEmail`
-- `Input.jsx` reusable input component
-- `AUTH_IMG` asset for visual design
-
-Current Status: API Call Not Implemented
-- The try-catch block in `handleSignUp` is empty
-- Need to add:
-  ```javascript
-  const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
-    name: fullName,
-    email,
-    password,
-    adminAccessToken: adminAccessToken || undefined
-  });
-  
-  const { token, role } = response.data;
-  if (token) {
-    localStorage.setItem("token", token);
-    updateUser(response.data);
-    setOpenAuthForm(false);
-    
-    if (role === "admin") {
-      navigate("/admin/dashboard");
-    } else {
-      navigate("/");
-    }
-  }
-  ```
-
-Why This Approach
-- Single form handles both regular and admin registration (no separate pages)
-- Admin token is optional, so regular users leave it blank
-- Reusable Input components keep code clean
-- Responsive grid adapts to screen size
-- Validation prevents unnecessary API calls
-
-Improvements Needed
-1. Complete the API call implementation in the try block
-2. Wire up `profilePic` state with file upload input and call `uploadImage` utility
-3. Add loading state to disable button during request
-4. Add password strength indicator
-5. Consider separating admin registration to a dedicated protected page
-6. Add terms/privacy checkbox before signup
-
-Security Considerations
-- Admin token should be a strong secret (not easily guessable)
-- Backend must validate the token securely
-- Never expose the admin token in client code or logs
-- Consider rate limiting signup attempts
-- Validate password strength on backend
+8) Next enhancements (optional)
+- Add upload progress via Axios `onUploadProgress` and show a progress bar.
+- Add client-side image size/type validation and compression.
+- Limit file size on backend and return friendly errors.
+- Move image uploads to a dedicated storage (S3/Cloudinary) for production.

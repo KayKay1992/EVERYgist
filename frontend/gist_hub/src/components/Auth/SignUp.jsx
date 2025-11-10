@@ -6,6 +6,8 @@ import { API_PATHS } from "../../utils/apiPaths";
 import AUTH_IMG from "../../assets/auth-img-blog.jpg";
 import Input from "../Inputs/Input";
 import { validateEmail } from "../../utils/helper";
+import ProfilePhotoSelector from "../Inputs/ProfilePhotoSelector";
+import uploadImage from "../../utils/uploadImage";
 
 const SignUp = ({ setCurrentPage }) => {
   const [profilePic, setProfilePic] = useState(null);
@@ -41,7 +43,33 @@ const SignUp = ({ setCurrentPage }) => {
 
     //SignUp API call
     try {
-      
+      //upload Image if present
+      if (profilePic) {
+        const imgUploadsRes = await uploadImage(profilePic);
+        profileImageUrl = imgUploadsRes.imageUrl || "";
+      }
+
+      const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
+        name: fullName,
+        email,
+        password,
+        profileImageUrl,
+        adminAccessToken,
+      });
+
+      const { token, role } = response.data;
+      if (token) {
+        localStorage.setItem("token", token);
+        updateUser(response.data);
+
+        //Navigate based on role
+        if (role === "admin") {
+          setOpenAuthForm(false);
+          navigate("/admin/dashboard");
+        }
+        navigate("/");
+        setOpenAuthForm(false);
+      }
     } catch (error) {
       if (
         error.response &&
@@ -55,7 +83,7 @@ const SignUp = ({ setCurrentPage }) => {
     }
   };
   return (
-    <div className="flex items-center h-[520px]">
+    <div className="flex items-center h-auto md:h-[520px]">
       <div className="w-[90vw] md:w-[43vw] p-7 flex flex-col justify-center">
         <h3 className="text-lg font-semibold text-black">
           {" "}
@@ -66,6 +94,7 @@ const SignUp = ({ setCurrentPage }) => {
         </p>
 
         <form className="" onSubmit={handleSignUp}>
+          <ProfilePhotoSelector image={profilePic} setImage={setProfilePic} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 ">
             <Input
               value={fullName}

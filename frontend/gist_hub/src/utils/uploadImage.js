@@ -2,18 +2,23 @@ import { API_PATHS } from "./apiPaths";
 import axiosInstance from "./axioInstance";
 
 const uploadImage = async (imageFile) => {
-  const formData = new FormData();
+  console.log("uploadImage called with:", imageFile);
 
-  //Append image file to formData
+  const formData = new FormData();
   formData.append("image", imageFile);
 
+  console.log("FormData created, checking contents:");
+  for (let pair of formData.entries()) {
+    console.log(pair[0], pair[1]);
+  }
+
   try {
-    constresponse = await axiosInstance.post(
+    const response = await axiosInstance.post(
       API_PATHS.IMAGE.UPLOAD_IMAGE,
       formData,
       {
         headers: {
-          "Content-Type": "multipart/form-data", //set header for file upload
+          "Content-Type": "multipart/form-data",
         },
       }
     );
@@ -23,5 +28,4 @@ const uploadImage = async (imageFile) => {
     throw error;
   }
 };
-
 export default uploadImage;
