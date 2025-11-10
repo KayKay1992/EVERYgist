@@ -1,60 +1,83 @@
-Profile Image Upload Component
+Navbar Profile Info component
 
-## Profile Image Upload — Step-by-step Implementation
+## Navbar Profile Info Component — Step-by-Step Implementation
 
-1) Frontend UI (picker + preview)
-- File: `frontend/gist_hub/src/components/Inputs/ProfilePhotoSelector.jsx`
-- You built a small, reusable component that:
-	- Opens the OS file picker (accepts `image/*`).
-	- Stores the selected File in parent state via `setImage(file)`.
-	- Generates a temporary preview using `URL.createObjectURL(file)` so the user sees the selected image before uploading.
-	- Lets users remove the selected image (clears both preview and File state).
+### Overview
+You created a small profile card that displays the logged-in user's name and profile picture in the navbar, along with a logout button. It appears only when the user is authenticated.
 
-2) Hooked it into SignUp
-- File: `frontend/gist_hub/src/components/Auth/SignUp.jsx`
-- Added `<ProfilePhotoSelector image={profilePic} setImage={setProfilePic} />` above the form fields.
-- On submit (`handleSignUp`):
-	- Validates full name, email, password.
-	- If `profilePic` is present, uploads the file first to get a URL.
-	- Sends the signup payload along with `profileImageUrl` to `/api/auth/register`.
-	- Saves the returned token, updates `UserContext`, and navigates based on role.
+### Files Involved
 
-3) Upload helper (FormData + Axios)
-- File: `frontend/gist_hub/src/utils/uploadImage.js`
-- Creates `FormData` and appends the File under the key `image` (must match backend middleware).
-- Posts to `BASE_URL + /api/auth/upload-image` using Axios.
-- Important: Sends `multipart/form-data` headers so the server parses the file correctly.
-- Added debug logs to verify the File object and FormData entries during testing.
+1. **Component File**
+   - `frontend/gist_hub/src/components/Cards/ProfileInfoCard.jsx`
 
-4) Backend route and middleware
-- Route: `backend/routes/authRoutes.js` → `POST /api/auth/upload-image`
-- Middleware: `backend/middleware/uploadMiddleware.js` (multer)
-- What it does:
-	- Uses `multer.diskStorage` to save files into `backend/uploads/`.
-	- Uses a filename like `${Date.now()}-originalName` to avoid collisions.
-	- Restricts uploads to image mimetypes: jpeg/jpg/png/gif.
-	- Returns a public `imageUrl` like `http://localhost:8000/uploads/<filename>`.
-- Fix applied: switched the destination to an absolute path with `path.join(__dirname, '../uploads/')` so it works regardless of CWD.
+2. **Integration**
+   - `frontend/gist_hub/src/components/layouts/BlogLayout/BlogNavbar.jsx`
 
-5) Serving uploaded files
-- In `backend/server.js`, the `/uploads` folder is exposed via `express.static`, so the returned `imageUrl` is immediately viewable in the browser.
+3. **Dependencies**
+   - `UserContext` for user state and `clearUser` function
+   - React Router's `useNavigate` for post-logout navigation
 
-6) Debugging the errors you fixed
-- 500 → 400 progression:
-	- 500 (Internal Server Error) was resolved by fixing the multer destination to an absolute path.
-	- 400 (Bad Request: No file uploaded) was due to FormData/headers; fixed by ensuring Axios sends `multipart/form-data` and that the key name is exactly `image`.
-- Typo fix: `constresponse` → `const response` in `uploadImage.js`.
-- Missing import: added `import uploadImage from "../../utils/uploadImage";` in `SignUp.jsx`.
-- Extra polish: added console logs to confirm the File and FormData contents during troubleshooting.
+### Step-by-Step Implementation
 
-7) Final data flow
-- User selects a file → `ProfilePhotoSelector` updates `profilePic`.
-- Submit → `uploadImage(profilePic)` → server stores file → returns `imageUrl`.
-- Signup request includes `{ profileImageUrl: imageUrl }` → backend saves it to the user.
-- App stores token in localStorage, updates context, and navigates to the correct page.
+**Step 1: Created the ProfileInfoCard Component**
+- File: `ProfileInfoCard.jsx`
+- Uses `useContext(UserContext)` to access:
+  - `user` — the authenticated user object (contains name, profileImageUrl, role, etc.)
+  - `clearUser` — function to clear user from context and localStorage
+- Uses `useNavigate()` to redirect after logout
 
-8) Next enhancements (optional)
-- Add upload progress via Axios `onUploadProgress` and show a progress bar.
-- Add client-side image size/type validation and compression.
-- Limit file size on backend and return friendly errors.
-- Move image uploads to a dedicated storage (S3/Cloudinary) for production.
+**Step 2: Component Structure**
+- Conditionally renders only if `user` exists (returns `null` if not logged in)
+- Layout:
+  - Profile image (circular, 11×11, fallback to empty string if no image)
+  - User's name (bold, 15px)
+  - Logout button (sky-600 color, underline on hover)
+
+**Step 3: Logout Logic**
+- `handleLogout` function:
+  1. Clears all localStorage (removes token and any cached data)
+  2. Calls `clearUser()` to reset `UserContext` state
+  3. Navigates to `/login` page
+
+**Step 4: Integrated into BlogNavbar**
+- File: `BlogNavbar.jsx`
+- Imported `ProfileInfoCard` at the top
+- Conditional rendering in the navbar's right section:
+  - If `!user` → shows "Login/SignUp" button (opens auth modal via `setOpenAuthForm(true)`)
+  - If `user` exists → shows `<ProfileInfoCard />` (hidden on mobile with `hidden md:block`)
+
+**Step 5: User Flow**
+1. User logs in → `updateUser` in context sets `user` state and stores token
+2. BlogNavbar detects `user` is not null → hides login button, shows ProfileInfoCard
+3. ProfileInfoCard displays user's profile image and name
+4. User clicks "Logout" → clears storage, resets context, redirects to `/login`
+5. BlogNavbar detects `user` is null again → shows "Login/SignUp" button
+
+### Key Features
+
+- **Responsive Design**: Only visible on medium+ screens (`hidden md:block`)
+- **User Avatar**: Shows uploaded profile image or empty fallback
+- **Clean Logout**: Clears all localStorage and context in one action
+- **Navigation**: Auto-redirects to login page after logout
+
+### Styling Details
+
+- Profile image: `w-11 h-11` (44px circle), `bg-gray-300` fallback, `rounded-full`, `mr-3` spacing
+- User name: `text-[15px]`, `font-bold`, `leading-3` (tight line height)
+- Logout button: `text-sky-600`, `font-semibold`, `hover:underline`, `mt-2` spacing, `cursor-pointer`
+
+### Why This Approach
+
+- **Centralized State**: Uses `UserContext` so any component can access user data without prop drilling
+- **Conditional Rendering**: Only shows when authenticated, keeping UI clean
+- **Single Responsibility**: Small, focused component that only handles profile display and logout
+- **Reusable**: Can be used in other navbars or headers if needed
+
+### Possible Enhancements
+
+- Add a dropdown menu with additional options (Settings, Profile, Dashboard link)
+- Show user role badge (e.g., "Admin" chip)
+- Add profile picture fallback with user initials
+- Animate the logout transition
+- Add a confirmation modal before logout
+- Display user stats (posts count, comments, etc.) in a tooltip or dropdown
