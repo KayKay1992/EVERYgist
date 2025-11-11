@@ -2,7 +2,7 @@ import React from "react";
 import { BLOG_NAVBAR_DATA, SIDE_MENU_DATA } from "../../utils/data";
 import { LuLogOut } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
-import CharAvatar from "../Charts/CharAvatar";
+import CharAvatar from "../Cards/CharAvatar";
 import { useContext } from "react";
 import { UserContext } from "../../context/userContext";
 
