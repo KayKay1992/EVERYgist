@@ -1,83 +1,170 @@
-Navbar Profile Info component
+Creating Dashboard Layout
 
-## Navbar Profile Info Component — Step-by-Step Implementation
+## Dashboard Layout with Navbar — Step-by-Step Implementation
 
 ### Overview
-You created a small profile card that displays the logged-in user's name and profile picture in the navbar, along with a logout button. It appears only when the user is authenticated.
+You built a reusable admin dashboard layout that wraps all admin pages with a consistent navbar, collapsible side menu, and responsive design. The layout handles authentication checks, mobile menu toggling, and provides a clean structure for admin content.
 
 ### Files Involved
 
-1. **Component File**
-   - `frontend/gist_hub/src/components/Cards/ProfileInfoCard.jsx`
+1. **Layout Component**
+   - `frontend/gist_hub/src/components/layouts/DashboardLayout.jsx`
 
-2. **Integration**
-   - `frontend/gist_hub/src/components/layouts/BlogLayout/BlogNavbar.jsx`
+2. **Navbar Component**
+   - `frontend/gist_hub/src/components/layouts/Navbar.jsx`
 
-3. **Dependencies**
-   - `UserContext` for user state and `clearUser` function
-   - React Router's `useNavigate` for post-logout navigation
+3. **SideMenu Component**
+   - `frontend/gist_hub/src/components/layouts/SideMenu.jsx`
+
+4. **Usage Examples**
+   - `frontend/gist_hub/src/pages/Admin/Dashboard.jsx`
+   - `frontend/gist_hub/src/pages/Admin/BlogPosts.jsx`
+   - All other admin pages
+
+5. **Dependencies**
+   - `UserContext` for authentication state
+   - `SIDE_MENU_DATA` from `utils/data.js` for menu items
+   - React Router for navigation
 
 ### Step-by-Step Implementation
 
-**Step 1: Created the ProfileInfoCard Component**
-- File: `ProfileInfoCard.jsx`
-- Uses `useContext(UserContext)` to access:
-  - `user` — the authenticated user object (contains name, profileImageUrl, role, etc.)
-  - `clearUser` — function to clear user from context and localStorage
-- Uses `useNavigate()` to redirect after logout
+**Step 1: Created DashboardLayout Wrapper Component**
+- File: `DashboardLayout.jsx`
+- Accepts two props:
+  - `children` — the actual page content to render inside the layout
+  - `activeMenu` — string to highlight the current menu item
+- Gets `user` from `UserContext` to check authentication
+- Structure:
+  - Always renders `<Navbar>` at the top
+  - Conditionally renders content area only if `user` exists (logged in)
+  - Uses flexbox layout: SideMenu on left, content area on right
 
-**Step 2: Component Structure**
-- Conditionally renders only if `user` exists (returns `null` if not logged in)
-- Layout:
-  - Profile image (circular, 11×11, fallback to empty string if no image)
-  - User's name (bold, 15px)
-  - Logout button (sky-600 color, underline on hover)
+**Step 2: Built the Navbar**
+- File: `Navbar.jsx`
+- Features:
+  - Logo on the left
+  - Hamburger menu icon (only visible on mobile/tablet with `block lg:hidden`)
+  - Toggles `openSideMenu` state on click
+  - Sticky positioning (`sticky top-0 z-30`) so it stays visible when scrolling
+  - White background with subtle border
+- Mobile behavior:
+  - Shows/hides menu icon (HiOutlineMenu ↔ HiOutlineX)
+  - When open, displays SideMenu in a fixed overlay at `top-[61px]`
 
-**Step 3: Logout Logic**
-- `handleLogout` function:
-  1. Clears all localStorage (removes token and any cached data)
-  2. Calls `clearUser()` to reset `UserContext` state
-  3. Navigates to `/login` page
+**Step 3: Created SideMenu with Profile Section**
+- File: `SideMenu.jsx`
+- Profile Display (top section):
+  - Shows user's profile image (circular, 80×80) or CharAvatar fallback (initials)
+  - User's name and email below the avatar
+  - Only renders if `user` exists
+- Menu Items:
+  - Maps over `SIDE_MENU_DATA` or `BLOG_NAVBAR_DATA` (depending on `isBlogMenu` prop)
+  - Each item has an icon and label
+  - Highlights active menu with gradient background (`from-sky-500 to-cyan-400`)
+  - Clicking an item navigates and closes mobile menu
+- Logout Button:
+  - At the bottom of the menu
+  - Clears localStorage, resets context, navigates to `/`
+- Responsive:
+  - Hidden on screens < 1080px in DashboardLayout
+  - Shows in mobile overlay when hamburger is clicked
 
-**Step 4: Integrated into BlogNavbar**
-- File: `BlogNavbar.jsx`
-- Imported `ProfileInfoCard` at the top
-- Conditional rendering in the navbar's right section:
-  - If `!user` → shows "Login/SignUp" button (opens auth modal via `setOpenAuthForm(true)`)
-  - If `user` exists → shows `<ProfileInfoCard />` (hidden on mobile with `hidden md:block`)
+**Step 4: Responsive Layout Logic**
+- Desktop (≥1080px):
+  - SideMenu always visible on left
+  - Navbar at top
+  - Content area fills remaining space with `grow mx-5`
+- Tablet/Mobile (<1080px):
+  - SideMenu hidden by default (`max-[1080px]:hidden`)
+  - Hamburger icon in Navbar
+  - Clicking hamburger opens SideMenu as fixed overlay
+  - Clicking menu item or outside closes it
 
-**Step 5: User Flow**
-1. User logs in → `updateUser` in context sets `user` state and stores token
-2. BlogNavbar detects `user` is not null → hides login button, shows ProfileInfoCard
-3. ProfileInfoCard displays user's profile image and name
-4. User clicks "Logout" → clears storage, resets context, redirects to `/login`
-5. BlogNavbar detects `user` is null again → shows "Login/SignUp" button
+**Step 5: Integrated into Admin Pages**
+- Each admin page imports `DashboardLayout` and wraps its content:
+  ```jsx
+  <DashboardLayout activeMenu="Dashboard">
+    <div className="p-6">
+      {/* Page content here */}
+    </div>
+  </DashboardLayout>
+  ```
+- The `activeMenu` prop highlights the current section in SideMenu
+- Examples: Dashboard, Blog Posts, Comments, Create/Edit Post all use this layout
+
+**Step 6: Authentication Guard**
+- DashboardLayout only renders the content area if `user` exists
+- If not logged in, only the Navbar shows (though admin pages are also protected by PrivateRoutes)
+- Double protection: route-level guard + layout-level check
 
 ### Key Features
 
-- **Responsive Design**: Only visible on medium+ screens (`hidden md:block`)
-- **User Avatar**: Shows uploaded profile image or empty fallback
-- **Clean Logout**: Clears all localStorage and context in one action
-- **Navigation**: Auto-redirects to login page after logout
+**Navbar**
+- Sticky header stays at top during scroll
+- Mobile-friendly hamburger menu
+- Logo branding
+- Consistent across all admin pages
+
+**SideMenu**
+- User profile section with avatar/initials
+- Icon-based navigation
+- Active menu highlighting
+- Logout functionality
+- Responsive overlay on mobile
+
+**Layout**
+- Reusable wrapper reduces code duplication
+- Consistent spacing and structure
+- Flex-based responsive design
+- Auth-aware rendering
 
 ### Styling Details
 
-- Profile image: `w-11 h-11` (44px circle), `bg-gray-300` fallback, `rounded-full`, `mr-3` spacing
-- User name: `text-[15px]`, `font-bold`, `leading-3` (tight line height)
-- Logout button: `text-sky-600`, `font-semibold`, `hover:underline`, `mt-2` spacing, `cursor-pointer`
+**Navbar**
+- Height: `py-4 px-7` (padding)
+- Background: `bg-white` with `border-b border-gray-200/50`
+- Logo: `h-6 md:h-[26px]` (responsive height)
+- Hamburger: `text-2xl`, toggles between menu/close icons
+
+**SideMenu**
+- Width: `w-45` (custom width)
+- Height: `h-[calc(100vh-61px)]` (viewport height minus navbar)
+- Profile avatar: `w-20 h-20 rounded-full`
+- Menu items: `py-3 px-4`, active gets gradient background
+- Sticky: `sticky top-[61px]` aligns below navbar
+
+**Content Area**
+- `grow` to fill available horizontal space
+- `mx-5` horizontal margins
+
+### Data Flow
+
+1. User logs in → `UserContext` populated
+2. Navigate to `/admin/dashboard`
+3. PrivateRoutes checks role
+4. Dashboard.jsx renders
+5. DashboardLayout wraps content
+6. DashboardLayout checks `user` from context
+7. Renders Navbar + SideMenu + children
+8. SideMenu shows profile and highlights "Dashboard" menu item
+9. User clicks "Blog Posts" in menu
+10. Navigate to `/admin/posts`, activeMenu changes, highlight updates
 
 ### Why This Approach
 
-- **Centralized State**: Uses `UserContext` so any component can access user data without prop drilling
-- **Conditional Rendering**: Only shows when authenticated, keeping UI clean
-- **Single Responsibility**: Small, focused component that only handles profile display and logout
-- **Reusable**: Can be used in other navbars or headers if needed
+- **DRY Principle**: Single layout component used by all admin pages
+- **Separation of Concerns**: Navbar, SideMenu, and Layout are independent, reusable components
+- **Mobile-First**: Responsive design adapts to screen size
+- **User-Centric**: Profile info and logout always accessible
+- **Consistent UX**: All admin pages feel unified
 
 ### Possible Enhancements
 
-- Add a dropdown menu with additional options (Settings, Profile, Dashboard link)
-- Show user role badge (e.g., "Admin" chip)
-- Add profile picture fallback with user initials
-- Animate the logout transition
-- Add a confirmation modal before logout
-- Display user stats (posts count, comments, etc.) in a tooltip or dropdown
+- Add breadcrumbs below the navbar for deeper navigation paths
+- Show notification badge on menu items (e.g., "3 new comments")
+- Add theme toggle (light/dark mode) in navbar
+- Collapsible/expandable SideMenu on desktop (icon-only mode)
+- Add loading skeleton while `user` is being fetched
+- Profile dropdown in navbar with quick actions
+- Add search bar in navbar for global admin search
+- Persist SideMenu open/close state in localStorage

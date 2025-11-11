@@ -15,6 +15,8 @@ const SideMenu = ({ activeMenu, isBlogMenu, setOpenSideMenu }) => {
       handleLogout();
       return;
     }
+
+    console.log("route:", route);
     setOpenSideMenu((prevState) => !prevState);
     navigate(route);
   };
