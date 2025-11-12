@@ -14,6 +14,7 @@ import {
   LuHeart,
 } from "react-icons/lu";
 import DashboardSummaryCard from "../../components/Cards/DashboardSummaryCard";
+import TagInsights from "../../components/Cards/TagInsights";
 
 const Dashboard = () => {
   const { user } = useContext(UserContext);
@@ -116,6 +117,7 @@ const Dashboard = () => {
               <div className="flex justify-between items-center">
                 <h5 className="text-lg font-medium mt-8 mb-4">Tag Insights</h5>
               </div>
+              <TagInsights tagUsage={dashboardData?.tagUsage || []} />
             </div>
             <div className="col-span-12 md:col-span-5 bg-white p-6 rounded-2xl shadow-md shadow-gray-100 border border-gray-200/50 ">
               <div className="flex justify-between items-center">
