@@ -15,6 +15,7 @@ import {
 } from "react-icons/lu";
 import DashboardSummaryCard from "../../components/Cards/DashboardSummaryCard";
 import TagInsights from "../../components/Cards/TagInsights";
+import TopPostCard from "../../components/Cards/TopPostCard";
 
 const Dashboard = () => {
   const { user } = useContext(UserContext);
@@ -123,6 +124,16 @@ const Dashboard = () => {
               <div className="flex justify-between items-center">
                 <h5 className="text-lg font-medium mt-8 mb-4">Top Posts</h5>
               </div>
+              {dashboardData?.topPosts?.slice(0, 3).map((post) => (
+                <TopPostCard
+                  key={post._id}
+                  title={post.title}
+                  views={post.views}
+                  coverImageUrl={post.coverImageUrl}
+                  likes={post.likes}
+                  maxViews={post.maxViews}
+                />
+              ))}
             </div>
 
             <div className="col-span-12 bg-white p-6 rounded-2xl shadow-md shadow-gray-100 border border-gray-200/50 ">
