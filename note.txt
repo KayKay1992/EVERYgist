@@ -1,422 +1,126 @@
-Top Posts Section
+Recent Comments section
 
 ==========================================
-HOW I IMPLEMENTED THE TOP POSTS SECTION
+HOW I IMPLEMENTED THE RECENT COMMENTS SECTION
 ==========================================
 
 OVERVIEW:
-The Top Posts section displays the top 3 performing blog posts based on views and likes. Each post is shown in a card format with a cover image, title, view count, likes, and a visual progress bar indicating the post's performance relative to the highest-performing post.
+The Recent Comments section displays the latest comments made on blog posts, showing the commenter's profile image, name, comment content, date, and the associated post's title and cover image. This provides admins with a quick overview of recent user engagement.
 
 ==========================================
-STEP 1: BACKEND - FETCHING TOP POSTS
+STEP 1: BACKEND - FETCHING RECENT COMMENTS
 ==========================================
 
 File: backend/controllers/dashboardController.js
 
-Created a database query in the getDashboardSummary function to fetch the top-performing posts:
+Used MongoDB queries and population to fetch recent comments with author and post details:
 
 ```javascript
-const topPosts = await BlogPost.find({ isDraft: false })
-  .sort({ views: -1, likes: -1 })
-  .limit(5)
-  .select("title coverImageUrl views likes");
+const recentComments = await Comment.find()
+	.sort({ createdAt: -1 }) // Most recent first
+	.limit(5) // Only latest 5 comments
+	.populate("author", "name profileImageUrl") // Get author info
+	.populate("post", "title coverImageUrl");   // Get post info
 ```
 
-Query Breakdown:
-- `find({ isDraft: false })`: Only fetch published posts (exclude drafts)
-- `.sort({ views: -1, likes: -1 })`: Sort by views (descending), then by likes (descending)
-  - `-1` means descending order (highest first)
-  - Views is the primary sort criterion, likes is secondary
-- `.limit(5)`: Restrict to top 5 posts (frontend displays 3, but backend provides 5 for flexibility)
-- `.select("title coverImageUrl views likes")`: Only return these specific fields (optimization)
+- `.sort({ createdAt: -1 })`: Orders comments by newest first.
+- `.limit(5)`: Restricts to the 5 most recent comments.
+- `.populate("author", ...)`: Includes author's name and profile image.
+- `.populate("post", ...)`: Includes post's title and cover image.
 
-Why This Approach?
-1. **Performance**: By selecting only needed fields, we reduce data transfer
-2. **Published Only**: Drafts shouldn't appear in top posts
-3. **Dual Sorting**: Views is primary metric, likes breaks ties
-4. **Limited Results**: No need to fetch all posts, just top performers
-
-The API returns this data as part of the dashboard summary:
+Returned as part of the dashboard summary API response:
 ```javascript
 res.json({
-  stats: { /* ... */ },
-  topPosts,  // Array of top 5 posts with title, coverImageUrl, views, likes
-  recentComments,
-  tagUsage,
+	// ...other data
+	recentComments,
 });
 ```
 
 ==========================================
-STEP 2: TOP POST CARD COMPONENT
+STEP 2: RECENT COMMENTS LIST COMPONENT
 ==========================================
 
-File: frontend/gist_hub/src/components/Cards/TopPostCard.jsx
+File: frontend/gist_hub/src/components/Cards/RecentCommentsList.jsx
 
-Created a reusable card component to display individual post metrics:
+Created a reusable component to display the list of recent comments:
 
 ```jsx
-import React from "react";
-import { LuHeart } from "react-icons/lu";
-
-const TopPostCard = ({ title, views, coverImageUrl, likes, maxViews }) => {
-  // Calculate what percentage of max views this post has
-  const viewPercentage = ((views / maxViews) * 100).toFixed(0);
-  
-  return (
-    <div className="bg-white py-4 px-3 mb-4 rounded-lg shadow-sm border border-gray-200 flex flex-col gap-3">
-      {/* Post Header: Image + Title */}
-      <div className="flex flex-start gap-2">
-        <img
-          src={coverImageUrl}
-          alt={title}
-          className="w-10 h-10 rounded-md object-cover"
-        />
-        <h3 className="text-sm font-semibold text-gray-800 line-clamp-2">
-          {title}
-        </h3>
-      </div>
-      
-      {/* Progress Bar: Visual representation of views */}
-      <div className="relative w-full h-2 bg-sky-100/60 rounded-full overflow-hidden mt-2">
-        <div 
-          className="h-full bg-linear-to-r from-sky-500 to-cyan-400 rounded-full transition-all duration-300" 
-          style={{ width: `${viewPercentage}%` }}
-        ></div>
-      </div>
-
-      {/* Metrics: Views and Likes */}
-      <div className="flex items-center justify-between text-xs text-gray-600 mt-1">
-        <span className="flex items-center gap-1 text-sm text-black">
-          {views} Views
-        </span>
-        <span className="flex items-center gap-1 text-sm text-black">
-          <LuHeart className="text-[10px] text-gray-500" />
-          {likes} Likes
-        </span>
-      </div>
-    </div>
-  );
-};
-
-export default TopPostCard;
+const RecentCommentsList = ({comments}) => (
+	<div className="mt-4">
+		<ul className='space-y-4'>
+			{comments?.slice(0, 10).map((comment) => (
+				<li key={comment._id} className="flex gap-4 border-b border-gray-200 pb-4 last:border-none">
+					<img src={comment?.author?.profileImageUrl} alt={comment?.author?.name} className="w-10 h-10 rounded-full object-cover"/>
+					<div className="flex-1">
+						<div className="flex justify-between items-start">
+							<div>
+								<div className="flex items-center gap-1">
+									<p className="font-medium text-sm text-gray-500">@{comment?.author?.name}</p>
+									<LuDot className='text-gray-500'/>
+									<span className="text-[12px] text-gray-500 font-medium">
+										{moment(comment.updatedAt).format("Do MMM YYYY")}
+									</span>
+								</div>
+								<p className="text-sm text-black mt-0.5">{comment.content}</p>
+							</div>
+						</div>
+						<div className="mt-2 flex items-center gap-3">
+							<img src={comment?.post?.coverImageUrl} alt={comment?.post?.title} className="w-9 h-9 rounded-md object-cover"/>
+							<p className='text-xs text-gray-600 font-medium line-clamp-2'>{comment.post?.title}</p>
+						</div>
+					</div>
+				</li>
+			))}
+		</ul>
+	</div>
+);
 ```
 
-Component Breakdown:
-
-A) PROPS:
-   - `title`: Post title (string)
-   - `views`: Number of post views (number)
-   - `coverImageUrl`: URL to post cover image (string)
-   - `likes`: Number of likes (number)
-   - `maxViews`: Highest view count among all top posts (for percentage calculation)
-
-B) VIEW PERCENTAGE CALCULATION:
-   ```javascript
-   const viewPercentage = ((views / maxViews) * 100).toFixed(0);
-   ```
-   - Divides current post views by the maximum views
-   - Multiplies by 100 to get percentage
-   - `.toFixed(0)` rounds to whole number (no decimals)
-   - Example: If post has 500 views and max is 1000 → 50%
-
-C) LAYOUT STRUCTURE:
-   1. **Header Section**:
-      - Small cover image (10x10, rounded corners)
-      - Post title (2-line clamp for overflow)
-      - Flexbox layout for horizontal alignment
-
-   2. **Progress Bar**:
-      - Background: Light sky blue (indicates 100% scale)
-      - Foreground: Gradient sky to cyan (indicates actual percentage)
-      - Width dynamically set via inline style
-      - Smooth animation on load (300ms transition)
-
-   3. **Metrics Row**:
-      - Left: View count
-      - Right: Like count with heart icon
-      - Space-between for separation
-
-D) STYLING HIGHLIGHTS:
-   - `line-clamp-2`: Limits title to 2 lines with ellipsis
-   - `object-cover`: Ensures image fills container without distortion
-   - `overflow-hidden`: Clips progress bar at container edges
-   - `transition-all duration-300`: Smooth width animation
+Key Features:
+- Shows profile image, name, and comment content.
+- Displays comment date using moment.js for formatting.
+- Shows associated post's cover image and title.
+- Responsive, clean layout with flexbox and spacing.
 
 ==========================================
-STEP 3: CALCULATING MAX VIEWS
+STEP 3: DASHBOARD INTEGRATION
 ==========================================
 
 File: frontend/gist_hub/src/pages/Admin/Dashboard.jsx
 
-To display relative performance, we need to know the highest view count:
+Integrated the RecentCommentsList component into the dashboard:
 
 ```jsx
-const [dashboardData, setDashboardData] = useState(null);
-const [maxViews, setMaxViews] = useState(0);
-
-const getDashboardData = async () => {
-  try {
-    const response = await axiosInstance.get(
-      API_PATHS.DASHBOARD.GET_DASHBOARD_DATA
-    );
-    if (response.data) {
-      setDashboardData(response.data);
-
-      // Calculate maximum views from top posts
-      const topPosts = response.data?.topPosts || [];
-      const totalViews = Math.max(...topPosts.map((p) => p.views), 1);
-      setMaxViews(totalViews);
-    }
-  } catch (error) {
-    console.error("Error fetching dashboard data:", error);
-  }
-};
+<div className="col-span-12 bg-white p-6 rounded-2xl shadow-md shadow-gray-100 border border-gray-200/50">
+	<div className="flex justify-between items-center">
+		<h5 className="text-lg font-medium mt-8 mb-4">Recent Comments</h5>
+	</div>
+	<RecentCommentsList comments={dashboardData?.recentComments || []} />
+</div>
 ```
 
-Logic Breakdown:
-
-1. **Extract Top Posts**:
-   ```javascript
-   const topPosts = response.data?.topPosts || [];
-   ```
-   - Use optional chaining to safely access topPosts
-   - Default to empty array if undefined
-
-2. **Find Maximum**:
-   ```javascript
-   const totalViews = Math.max(...topPosts.map((p) => p.views), 1);
-   ```
-   - `.map((p) => p.views)`: Extract just the view counts → [1000, 800, 600, ...]
-   - `...topPosts.map(...)`: Spread array into individual arguments
-   - `Math.max(...)`: Find the highest value
-   - `, 1`: Default to 1 if no posts (prevents division by zero)
-
-3. **Store in State**:
-   ```javascript
-   setMaxViews(totalViews);
-   ```
-   - Saves maximum for use in TopPostCard components
-   - Used to calculate percentage for progress bars
-
-Why This Matters?
-- The post with the most views will have a 100% progress bar
-- Other posts show percentage relative to this maximum
-- Provides visual comparison at a glance
-
-==========================================
-STEP 4: RENDERING TOP POSTS IN DASHBOARD
-==========================================
-
-File: frontend/gist_hub/src/pages/Admin/Dashboard.jsx
-
-Integrated the Top Posts section into the dashboard layout:
-
-```jsx
-import TopPostCard from "../../components/Cards/TopPostCard";
-
-const Dashboard = () => {
-  // ... state and data fetching logic ...
-
-  return (
-    <DashboardLayout activeMenu="Dashboard">
-      {dashboardData && (
-        <>
-          {/* Summary cards section */}
-          
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 my-4 md:my-6">
-            {/* Tag Insights Section - 7 columns */}
-            <div className="col-span-12 md:col-span-7 bg-white p-6 rounded-2xl shadow-md">
-              <h5 className="text-lg font-medium mt-8 mb-4">Tag Insights</h5>
-              <TagInsights tagUsage={dashboardData?.tagUsage || []} />
-            </div>
-            
-            {/* Top Posts Section - 5 columns */}
-            <div className="col-span-12 md:col-span-5 bg-white p-6 rounded-2xl shadow-md">
-              <h5 className="text-lg font-medium mt-8 mb-4">Top Posts</h5>
-              {dashboardData?.topPosts?.slice(0, 3).map((post) => (
-                <TopPostCard
-                  key={post._id}
-                  title={post.title}
-                  views={post.views}
-                  coverImageUrl={post.coverImageUrl}
-                  likes={post.likes}
-                  maxViews={maxViews}
-                />
-              ))}
-            </div>
-            
-            {/* Recent Comments section placeholder */}
-          </div>
-        </>
-      )}
-    </DashboardLayout>
-  );
-};
-```
-
-Integration Breakdown:
-
-A) DATA SLICING:
-   ```javascript
-   dashboardData?.topPosts?.slice(0, 3)
-   ```
-   - Backend returns 5 posts, but we only display 3
-   - `.slice(0, 3)`: Takes first 3 elements
-   - Optional chaining prevents errors if data is undefined
-
-B) MAPPING TO CARDS:
-   ```javascript
-   .map((post) => (
-     <TopPostCard
-       key={post._id}
-       title={post.title}
-       views={post.views}
-       coverImageUrl={post.coverImageUrl}
-       likes={post.likes}
-       maxViews={maxViews}
-     />
-   ))
-   ```
-   - Creates a TopPostCard for each post
-   - `key={post._id}`: Unique React key for efficient rendering
-   - Spreads post properties as individual props
-   - Passes `maxViews` state to each card
-
-C) LAYOUT POSITIONING:
-   - Grid container: 12 columns total
-   - Tag Insights: 7 columns on desktop (left side)
-   - Top Posts: 5 columns on desktop (right side)
-   - Mobile: Both sections take full width (col-span-12)
-   - Gap: 6 units spacing between sections
-
-D) CONDITIONAL RENDERING:
-   ```javascript
-   {dashboardData && (
-     <>...</>
-   )}
-   ```
-   - Only render when data is loaded
-   - Prevents errors from accessing undefined data
-   - Shows nothing while loading (could add skeleton later)
+- Passes the recentComments array from dashboard data to the component.
+- Uses optional chaining for safe access.
+- Renders only when dashboard data is loaded.
 
 ==========================================
 KEY FEATURES & DESIGN DECISIONS
 ==========================================
 
-1. VISUAL HIERARCHY:
-   - Cover image provides quick visual recognition
-   - Title is prominent but limited to 2 lines
-   - Progress bar gives immediate performance insight
-   - Metrics row shows exact numbers
-
-2. RELATIVE PERFORMANCE:
-   - Progress bars are relative, not absolute
-   - Top post always shows 100% bar
-   - Easy to see which posts are performing well
-   - More intuitive than raw numbers alone
-
-3. RESPONSIVE DESIGN:
-   - Stacks vertically on mobile (full width)
-   - Side-by-side with Tag Insights on desktop
-   - Cards maintain consistent spacing (mb-4)
-   - Flexible layout adapts to content
-
-4. PERFORMANCE OPTIMIZATIONS:
-   - Backend limits to 5 posts (not all posts)
-   - Only selected fields returned (title, image, views, likes)
-   - Frontend displays 3 (reduces visual clutter)
-   - Single API call for all dashboard data
-
-5. USER EXPERIENCE:
-   - Clear visual indicators (progress bar)
-   - Both percentage (bar) and absolute (numbers) metrics
-   - Clean, modern card design
-   - Consistent with dashboard theme
-   - Quick scanning of top performers
-
-6. ERROR HANDLING:
-   - Optional chaining prevents crashes
-   - Default empty array if no data
-   - Math.max defaults to 1 (prevents division by zero)
-   - Conditional rendering waits for data
-
-==========================================
-TECHNICAL HIGHLIGHTS
-==========================================
-
-1. WHY LIMIT TO 3 POSTS ON FRONTEND?
-   - Prevents information overload
-   - Fits nicely in sidebar column
-   - Most important data is top 3 anyway
-   - Backend provides 5 for future flexibility
-
-2. WHY PROGRESS BAR INSTEAD OF JUST NUMBERS?
-   - Visual comparison is faster than reading numbers
-   - Shows relative performance at a glance
-   - More engaging and modern UX
-   - Combines with numbers for complete picture
-
-3. WHY SORT BY VIEWS THEN LIKES?
-   - Views indicate reach/popularity
-   - Likes indicate engagement/quality
-   - Views as primary metric makes sense for "top" posts
-   - Likes breaks ties when views are equal
-
-4. WHY CALCULATE MAX VIEWS IN FRONTEND?
-   - Backend doesn't know we want percentages
-   - Frontend has full control over visualization
-   - Easy to change calculation without backend update
-   - Separates concerns (data vs. presentation)
-
-5. WHY GRADIENT ON PROGRESS BAR?
-   - Modern, attractive design
-   - Matches app's blue/cyan color scheme
-   - More visually appealing than solid color
-   - Indicates "progress" or "growth" metaphorically
+- Shows latest user engagement at a glance.
+- Combines author and post info for context.
+- Responsive and visually clean.
+- Uses moment.js for readable date formatting.
+- Limits to 5-10 comments for clarity.
 
 ==========================================
 POTENTIAL ENHANCEMENTS
 ==========================================
 
-1. Click on card to navigate to post edit page
-2. Add "trending" indicator for posts gaining views quickly
-3. Show percentage number on hover over progress bar
-4. Add time period filter (top posts this week/month)
-5. Show view growth chart or sparkline
-6. Display publish date on cards
-7. Add "View All" button to see full list
-8. Skeleton loading state while data fetches
-9. Animate progress bar on load
-10. Add badge for posts with high engagement rate (likes/views ratio)
-
-==========================================
-DATA FLOW SUMMARY
-==========================================
-
-1. **Backend** (MongoDB Query):
-   - Query published posts sorted by views & likes
-   - Limit to top 5 posts
-   - Return title, cover image, views, likes
-
-2. **API Response**:
-   - Dashboard data includes `topPosts` array
-   - Single endpoint provides all dashboard data
-
-3. **Frontend State**:
-   - Store dashboard data in state
-   - Calculate and store maxViews
-   - Use for percentage calculations
-
-4. **Rendering**:
-   - Slice to top 3 posts
-   - Map each to TopPostCard component
-   - Pass maxViews for progress bar calculation
-   - Display in responsive grid layout
-
-5. **User View**:
-   - See top 3 performing posts
-   - Visual progress bars show relative performance
-   - Exact metrics (views, likes) clearly displayed
-   - Clean, scannable design
+- Add link to view full comment or post.
+- Show comment status (approved/pending).
+- Add reply or moderation actions.
+- Display more comments with pagination.
+- Animate new comments in real-time.
 
 ==========================================
