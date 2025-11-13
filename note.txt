@@ -1,126 +1,80 @@
-Recent Comments section
+Creating Blog Posts Page
+
+BlogPosts.jsx & Tabs.jsx Changes
 
 ==========================================
-HOW I IMPLEMENTED THE RECENT COMMENTS SECTION
+HOW I IMPLEMENTED TAB FILTERING FOR BLOG POSTS
 ==========================================
 
 OVERVIEW:
-The Recent Comments section displays the latest comments made on blog posts, showing the commenter's profile image, name, comment content, date, and the associated post's title and cover image. This provides admins with a quick overview of recent user engagement.
+Added a tab-based filtering UI to the Blog Posts admin page, allowing users to switch between All, Published, and Draft posts. Created a reusable Tabs component for clean, interactive tab navigation.
 
 ==========================================
-STEP 1: BACKEND - FETCHING RECENT COMMENTS
+STEP 1: BLOGPOSTS.JSX - TAB LOGIC & INTEGRATION
 ==========================================
 
-File: backend/controllers/dashboardController.js
+- Imported and used the new Tabs component.
+- Maintained state for tabs, active filter, and blog post list.
+- Fetched post counts for each status (all, published, draft) from the backend and mapped them to tab objects.
+- Rendered Tabs with:
+  - `tabs`: Array of tab objects with label and count
+  - `activeTab`: Current filter status
+  - `setActiveTab`: State setter for filter status
+- On tab change, refetched posts for the selected status.
 
-Used MongoDB queries and population to fetch recent comments with author and post details:
-
-```javascript
-const recentComments = await Comment.find()
-	.sort({ createdAt: -1 }) // Most recent first
-	.limit(5) // Only latest 5 comments
-	.populate("author", "name profileImageUrl") // Get author info
-	.populate("post", "title coverImageUrl");   // Get post info
-```
-
-- `.sort({ createdAt: -1 })`: Orders comments by newest first.
-- `.limit(5)`: Restricts to the 5 most recent comments.
-- `.populate("author", ...)`: Includes author's name and profile image.
-- `.populate("post", ...)`: Includes post's title and cover image.
-
-Returned as part of the dashboard summary API response:
-```javascript
-res.json({
-	// ...other data
-	recentComments,
-});
-```
-
-==========================================
-STEP 2: RECENT COMMENTS LIST COMPONENT
-==========================================
-
-File: frontend/gist_hub/src/components/Cards/RecentCommentsList.jsx
-
-Created a reusable component to display the list of recent comments:
-
+Key code:
 ```jsx
-const RecentCommentsList = ({comments}) => (
-	<div className="mt-4">
-		<ul className='space-y-4'>
-			{comments?.slice(0, 10).map((comment) => (
-				<li key={comment._id} className="flex gap-4 border-b border-gray-200 pb-4 last:border-none">
-					<img src={comment?.author?.profileImageUrl} alt={comment?.author?.name} className="w-10 h-10 rounded-full object-cover"/>
-					<div className="flex-1">
-						<div className="flex justify-between items-start">
-							<div>
-								<div className="flex items-center gap-1">
-									<p className="font-medium text-sm text-gray-500">@{comment?.author?.name}</p>
-									<LuDot className='text-gray-500'/>
-									<span className="text-[12px] text-gray-500 font-medium">
-										{moment(comment.updatedAt).format("Do MMM YYYY")}
-									</span>
-								</div>
-								<p className="text-sm text-black mt-0.5">{comment.content}</p>
-							</div>
-						</div>
-						<div className="mt-2 flex items-center gap-3">
-							<img src={comment?.post?.coverImageUrl} alt={comment?.post?.title} className="w-9 h-9 rounded-md object-cover"/>
-							<p className='text-xs text-gray-600 font-medium line-clamp-2'>{comment.post?.title}</p>
-						</div>
-					</div>
-				</li>
-			))}
-		</ul>
-	</div>
-);
+<Tabs
+  tabs={tabs}
+  activeTab={filterStatus}
+  setActiveTab={setFilterStatus}
+/>
 ```
 
-Key Features:
-- Shows profile image, name, and comment content.
-- Displays comment date using moment.js for formatting.
-- Shows associated post's cover image and title.
-- Responsive, clean layout with flexbox and spacing.
-
 ==========================================
-STEP 3: DASHBOARD INTEGRATION
+STEP 2: TABS.JSX - REUSABLE TAB COMPONENT
 ==========================================
 
-File: frontend/gist_hub/src/pages/Admin/Dashboard.jsx
+- Created a functional Tabs component accepting `tabs`, `activeTab`, and `setActiveTab` props.
+- Rendered each tab as a button with:
+  - Label (e.g., All, Published, Draft)
+  - Count (number of posts for that status)
+  - Dynamic styling for active/inactive state
+  - Underline indicator for active tab
+- Clicking a tab updates the active filter in the parent component.
 
-Integrated the RecentCommentsList component into the dashboard:
-
+Key code:
 ```jsx
-<div className="col-span-12 bg-white p-6 rounded-2xl shadow-md shadow-gray-100 border border-gray-200/50">
-	<div className="flex justify-between items-center">
-		<h5 className="text-lg font-medium mt-8 mb-4">Recent Comments</h5>
-	</div>
-	<RecentCommentsList comments={dashboardData?.recentComments || []} />
-</div>
+{tabs.map((tab) => (
+  <button
+    key={tab.label}
+    className={...}
+    onClick={() => setActiveTab(tab.label)}
+  >
+    <span>{tab.label}</span>
+    <span>{tab.count}</span>
+    {activeTab === tab.label && <div className="underline" />}
+  </button>
+))}
 ```
 
-- Passes the recentComments array from dashboard data to the component.
-- Uses optional chaining for safe access.
-- Renders only when dashboard data is loaded.
-
 ==========================================
-KEY FEATURES & DESIGN DECISIONS
+BENEFITS & DESIGN DECISIONS
 ==========================================
 
-- Shows latest user engagement at a glance.
-- Combines author and post info for context.
-- Responsive and visually clean.
-- Uses moment.js for readable date formatting.
-- Limits to 5-10 comments for clarity.
+- Improves UX by allowing quick filtering of posts by status.
+- Shows post counts for each status, giving instant overview.
+- Reusable Tabs component can be used elsewhere in the app.
+- Responsive, clean design with clear active state.
+- Efficient: Only fetches posts for the selected tab.
 
 ==========================================
 POTENTIAL ENHANCEMENTS
 ==========================================
 
-- Add link to view full comment or post.
-- Show comment status (approved/pending).
-- Add reply or moderation actions.
-- Display more comments with pagination.
-- Animate new comments in real-time.
+- Add more tabs (e.g., AI-generated, archived).
+- Animate tab transitions.
+- Add icons to tabs for visual cues.
+- Support keyboard navigation for accessibility.
 
 ==========================================
