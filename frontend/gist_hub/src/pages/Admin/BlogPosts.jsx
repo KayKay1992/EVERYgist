@@ -9,6 +9,7 @@ import moment from "moment";
 import { useState, useEffect } from "react";
 import Modal from "../../components/Modal";
 import Tabs from "../../components/Tabs";
+import BlogPostSummaryCard from "../../components/Cards/BlogPostSummaryCard";
 
 const BlogPosts = () => {
   const navigate = useNavigate();
@@ -94,7 +95,11 @@ const BlogPosts = () => {
               key={post._id}
               title={post.title}
               imgUrl={post.coverImageUrl}
-              updatedOn={post.updatedAt ? moment(post.updatedAt).format("Do MMMM, YYYY") : "-"}
+              updatedOn={
+                post.updatedAt
+                  ? moment(post.updatedAt).format("Do MMMM, YYYY")
+                  : "-"
+              }
               tags={post.tags}
               likes={post.likes}
               views={post.views}
@@ -104,10 +109,26 @@ const BlogPosts = () => {
               }
             />
           ))}
+
+         {page < totalPages && <div className="flex items-center justify-center mb-8">
+            <button
+              className="flex items-center gap-3 text-sm text-white font-medium bg-black px-7 py-2 rounded-md hover:bg-gray-900 text-nowrap disabled:bg-gray-400 cursor-pointer hover:scale-105 transition-all"
+              onClick={handleLoadMore}
+              disabled={isLoading}   
+            >
+              {isLoading ? (
+                <LuLoaderCircle className="animate-spin text-2xl text-amber-700" />
+              ) : (
+                <LuGalleryVerticalEnd className="text-2xl" />
+              )}{" "}
+              {isLoading ? "Loading..." : "Load More Posts"}
+            </button>
+          </div>}
         </div>
       </div>
     </DashboardLayout>
   );
 };
+
 
 export default BlogPosts;
