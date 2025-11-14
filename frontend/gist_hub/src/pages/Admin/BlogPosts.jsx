@@ -73,7 +73,11 @@ const BlogPosts = () => {
   };
 
   //Load more posts
-  const handleLoadMore = () => {};
+  const handleLoadMore = () => {
+    if (page < totalPages) {
+      getAllPosts(page + 1);
+    }
+  };
 
   useEffect(() => {
     getAllPosts(1);
