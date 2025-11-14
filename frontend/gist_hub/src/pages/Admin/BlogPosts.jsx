@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import Modal from "../../components/Modal";
 import Tabs from "../../components/Tabs";
 import BlogPostSummaryCard from "../../components/Cards/BlogPostSummaryCard";
+import DeleteAlertContent from "../../components/DeleteAlertContent";
 
 const BlogPosts = () => {
   const navigate = useNavigate();
@@ -59,7 +60,17 @@ const BlogPosts = () => {
   };
 
   //delete blog post
-  const deletePost = async (postId) => {};
+  const deletePost = async (postId) => {
+    try {
+      await axiosInstance.delete(API_PATHS.POSTS.DELETE(postId));
+      toast.success("Blog Post Deleted Successfully");
+      setOpenDeleteAlert({ open: false, data: null });
+
+      getAllPosts();
+    }catch (error) {
+      console.error("Error deleting post:", error);
+    }
+  };
 
   //Load more posts
   const handleLoadMore = () => {};
@@ -110,7 +121,7 @@ const BlogPosts = () => {
             />
           ))}
 
-         {page < totalPages && <div className="flex items-center justify-center mb-8">
+         {page < totalPages && (<div className="flex items-center justify-center mb-8">
             <button
               className="flex items-center gap-3 text-sm text-white font-medium bg-black px-7 py-2 rounded-md hover:bg-gray-900 text-nowrap disabled:bg-gray-400 cursor-pointer hover:scale-105 transition-all"
               onClick={handleLoadMore}
@@ -123,9 +134,17 @@ const BlogPosts = () => {
               )}{" "}
               {isLoading ? "Loading..." : "Load More Posts"}
             </button>
-          </div>}
+          </div>)}
         </div>
       </div>
+      <Modal
+        isOpen={openDeleteAlert?.open}
+        onClose={() => setOpenDeleteAlert({ open: false, data: null })}
+        title="Delete Blog Post">
+          <div className="w-[70vw] md:w-[50vw]">
+            <DeleteAlertContent content="Are you sure you want to delete this blog post?" onDelete={() => deletePost(openDeleteAlert?.data)}/>
+          </div>
+        </Modal>
     </DashboardLayout>
   );
 };
