@@ -14,6 +14,8 @@ import { API_PATHS } from "../../utils/apiPaths";
 import { useNavigate, useParams } from "react-router-dom";
 import CoverImageSelector from "../../components/Inputs/CoverImageSelector";
 import TagInput from "../../components/Inputs/TagInput";
+import SkeletonLoader from "../../components/Loader/SkeletonLoader";
+import BlogPostIdeaCard from "../../components/Cards/BlogPostIdeaCard";
 
 const BlogPostEditor = ({ isEdit }) => {
   const navigate = useNavigate();
@@ -47,7 +49,26 @@ const BlogPostEditor = ({ isEdit }) => {
   };
 
   //Generate blog post ideas using AI
-  const generatePostIdeas = async () => {};
+  const generatePostIdeas = async () => {
+    setIdeaLoading(true);
+    try {
+      const aiResponse = await axiosInstance.post(
+        API_PATHS.AI.GENERATE_BLOG_POST_IDEAS,
+        {
+          topics:
+            "SPORTS, HEALTH, TECHNOLOGY, EDUCATION, POLITICS TECHNOLOGY, LOCAL NEWS ",
+        }
+      );
+      const generatedIdeas = aiResponse.data || [];
+      if (generatedIdeas.length > 0) {
+        setPostIdeas(generatedIdeas);
+      }
+    } catch (error) {
+      console.error("Error generating post ideas:", error);
+    } finally {
+      setIdeaLoading(false);
+    }
+  };
 
   //Handle blog post publish
   const handlePublish = async (isDraft) => {};
@@ -71,7 +92,7 @@ const BlogPostEditor = ({ isEdit }) => {
     <DashboardLayout activeMenu="Blog Posts">
       <div className="my-5">
         <div className="grid grid-cols-1 gap-5 md:grid-cols-12 my-4">
-          <div className="form-card p-6 col-span-12 md:col-span-8 lg:col-span-9">
+          <div className="form-card p-6 col-span-12 md:col-span-8 lg:col-span-8">
             <div className="flex items-center justify-between ">
               <h2 className="text-base md:text-large font-medium">
                 {isEdit ? "Edit Post" : "Add New Post"}
@@ -140,7 +161,9 @@ const BlogPostEditor = ({ isEdit }) => {
             </div>
 
             <div className="mt-3">
-              <label className="text-xs font-medium text-slate-600">Content</label>
+              <label className="text-xs font-medium text-slate-600">
+                Content
+              </label>
 
               <div data-color-mode="light" className="mt-3">
                 <MDEditor
@@ -166,7 +189,6 @@ const BlogPostEditor = ({ isEdit }) => {
                     commands.heading4,
                     commands.heading5,
                     commands.heading6,
-                    
                   ]}
                   hideMenuBar={true}
                 />
@@ -179,14 +201,64 @@ const BlogPostEditor = ({ isEdit }) => {
               <TagInput
                 tags={postData?.tags || []}
                 setTags={(data) => handleValueChange("tags", data)}
-
               />
             </div>
           </div>
+
+          {/*AI Blog Post ideas section */}
+          {!isEdit && (
+            <div className="form-card col-span-12 md:col-span-4 lg:col-span-4 p-0">
+              <div className="flex items-center justify-between px-6 pt-6">
+                <h4 className="text-sm md:text-base font-medium inline-flex items-center gap-2">
+                  <span className="text-sky-600">
+                    <LuSparkles />
+                  </span>
+                  Ideas for your next post
+                </h4>
+
+                <button
+                  className="bg-linear-to-r from-sky-500 to-cyan-400 hover:from-sky-600 hover:to-sky-800 text-white text-xs md:text-sm font-semibold transition-colors cursor-pointer px-3 py-1.5 rounded flex items-center gap-2 disabled:opacity-50 hover:shadow-2xl hover:shadow-sky-200"
+                  onClick={() =>
+                    setOpenBlogPostGenForm({
+                      open: true,
+                      data: null,
+                    })
+                  }
+                >
+                  Generate New
+                </button>
+              </div>
+
+              <div className="">
+                {ideaLoading ? (
+                  <div className="p-5 ">
+                    <SkeletonLoader />
+                  </div>
+                ) : (
+                  postIdeas.map((idea, index) => (
+                    <BlogPostIdeaCard
+                      key={`idea_${index}`}
+                      title={idea.title || ""}
+                      description={idea.description || ""}
+                      tags={idea.tags || []}
+                      wordCount={idea.wordCount || ""}
+                      tone={idea.tone || "casual"}
+                      onSelect={() =>
+                        setOpenBlogPostGenForm({
+                          open: true,
+                          data: idea,
+                        })
+                      }
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
   );
-};
+}
 
 export default BlogPostEditor;
