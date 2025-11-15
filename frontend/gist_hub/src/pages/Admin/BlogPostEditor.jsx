@@ -13,6 +13,7 @@ import axiosInstance from "../../utils/axioInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import { useNavigate, useParams } from "react-router-dom";
 import CoverImageSelector from "../../components/Inputs/CoverImageSelector";
+import TagInput from "../../components/Inputs/TagInput";
 
 const BlogPostEditor = ({ isEdit }) => {
   const navigate = useNavigate();
@@ -170,6 +171,16 @@ const BlogPostEditor = ({ isEdit }) => {
                   hideMenuBar={true}
                 />
               </div>
+            </div>
+
+            <div className="mt-3">
+              <label className="text-xs font-medium text-slate-600">Tags</label>
+
+              <TagInput
+                tags={postData?.tags || []}
+                setTags={(data) => handleValueChange("tags", data)}
+
+              />
             </div>
           </div>
         </div>
