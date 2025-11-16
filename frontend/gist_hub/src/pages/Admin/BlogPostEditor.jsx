@@ -16,6 +16,8 @@ import CoverImageSelector from "../../components/Inputs/CoverImageSelector";
 import TagInput from "../../components/Inputs/TagInput";
 import SkeletonLoader from "../../components/Loader/SkeletonLoader";
 import BlogPostIdeaCard from "../../components/Cards/BlogPostIdeaCard";
+import GenerateBlogPostForm from "./components/GenerateBlogPostForm";
+import Modal from "../../components/Modal";
 
 const BlogPostEditor = ({ isEdit }) => {
   const navigate = useNavigate();
@@ -190,14 +192,13 @@ const BlogPostEditor = ({ isEdit }) => {
                     commands.heading5,
                     commands.heading6,
                   ]}
-                  hideMenuBar={true}
+                  hideHeader={true}
                 />
               </div>
             </div>
 
             <div className="mt-3">
               <label className="text-xs font-medium text-slate-600">Tags</label>
-
               <TagInput
                 tags={postData?.tags || []}
                 setTags={(data) => handleValueChange("tags", data)}
@@ -257,8 +258,39 @@ const BlogPostEditor = ({ isEdit }) => {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={openBlogPostGenForm?.open}
+        onClose={() => {
+          setOpenBlogPostGenForm({
+            open: false,
+            data: null,
+          });
+        }}
+        hideHeader
+      >
+        <GenerateBlogPostForm
+          contentParams={openBlogPostGenForm?.data || null}
+          setPostContent={(title, content) => {
+            const postInfo = openBlogPostGenForm?.data || null;
+            setPostData((prevState) => ({
+              ...prevState,
+              title: title || prevState.title,
+              content: content,
+              tags: postInfo?.tags || prevState.tags,
+              generatedByAI: true,
+            }));
+          }}
+          handleCloseForm={() => {
+            setOpenBlogPostGenForm({
+              open: false,
+              data: null,
+            });
+          }}
+        />
+      </Modal>
     </DashboardLayout>
   );
-}
+};
 
 export default BlogPostEditor;
