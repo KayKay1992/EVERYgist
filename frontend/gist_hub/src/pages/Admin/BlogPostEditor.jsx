@@ -9,6 +9,9 @@ import {
   LuSparkles,
   LuTrash2,
 } from "react-icons/lu";
+import { toast } from "react-hot-toast";
+import { getToastMessageByType } from "../../utils/helper";
+import uploadImage from "../../utils/uploadImage";
 import axiosInstance from "../../utils/axioInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import { useNavigate, useParams } from "react-router-dom";
@@ -28,7 +31,7 @@ const BlogPostEditor = ({ isEdit }) => {
     content: "",
     coverImageUrl: "",
     coverPreview: "",
-    tags: "",
+    tags: [],
     isDraft: "",
     generatedByAI: false,
   });
@@ -73,7 +76,81 @@ const BlogPostEditor = ({ isEdit }) => {
   };
 
   //Handle blog post publish
-  const handlePublish = async (isDraft) => {};
+  const handlePublish = async (isDraft) => {
+    let coverImageUrl = "";
+
+    if (!postData.title.trim()) {
+      setError("Post title is required.");
+      return;
+    }
+    if (!postData.content.trim()) {
+      setError("Post content is required.");
+      return;
+    }
+    if (!isDraft) {
+      if (!isEdit && !postData.coverImageUrl) {
+        setError("Cover image is required for publishing post.");
+        return;
+      }
+      if (isEdit && !postData.coverImageUrl && !postData.coverPreview) {
+        setError("Cover image is required for publishing post.");
+        return;
+      }
+      if (
+        !postData.tags ||
+        !Array.isArray(postData.tags) ||
+        postData.tags.length === 0
+      ) {
+        setError("At least one tag is required for publishing post.");
+        return;
+      }
+    }
+    setLoading(true);
+    setError("");
+    try {
+      //check if a new image was uploaded (file type)
+      if (postData.coverImageUrl instanceof File) {
+        const imgUploadRes = await uploadImage(postData.coverImageUrl);
+        coverImageUrl = imgUploadRes.imageUrl || "";
+      } else {
+        coverImageUrl = postData.coverPreview;
+      }
+
+      const reqPayload = {
+        title: postData.title,
+        content: postData.content,
+        coverImageUrl,
+        tags: postData.tags,
+        isDraft: isDraft ? true : false,
+        generatedByAI: true,
+      };
+
+      const response = isEdit
+        ? await axiosInstance.put(
+            API_PATHS.POSTS.UPDATE(postData.id),
+            reqPayload
+          )
+        : await axiosInstance.post(API_PATHS.POSTS.CREATE_POST, reqPayload);
+
+      if (response.data) {
+        toast.success(
+          getToastMessageByType(
+            isDraft ? "draft" : isEdit ? "edit" : "published"
+          )
+        );
+        navigate("/admin/posts");
+      }
+    } catch (error) {
+      console.error("Error publishing post:", error);
+      setError(
+        error.response && error.response.data && error.response.data.message
+          ? error.response.data.message
+          : "Failed to publish post. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   //Get Post data by slug
   const fetchPostDetailsBySlug = async () => {};

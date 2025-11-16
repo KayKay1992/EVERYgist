@@ -15,3 +15,16 @@ export const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(String(email).toLowerCase());
 };
+
+export const getToastMessageByType = (type) => {
+  switch (type) {
+    case 'edit':
+      return 'Blog post updated successfully!';
+    case 'draft':
+      return 'Blog post saved as draft!';
+    case 'published':
+      return 'Blog post published successfully!';
+    default:
+      return 'Blog post saved successfully!';
+  }
+};
