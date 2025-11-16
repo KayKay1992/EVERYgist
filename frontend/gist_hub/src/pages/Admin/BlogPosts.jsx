@@ -37,11 +37,11 @@ const BlogPosts = () => {
           page: pageNumber,
         },
       });
-      const { posts, totalPages, counts } = response.data;
+      const { posts, totalPage, counts } = response.data;
       setBlogPostList((prevPosts) =>
         pageNumber === 1 ? posts : [...prevPosts, ...posts]
       );
-      setTotalPages(totalPages);
+      setTotalPages(totalPage);
       setPage(pageNumber);
 
       //Map statusSummary data with fixed labels and order.
@@ -67,7 +67,7 @@ const BlogPosts = () => {
       setOpenDeleteAlert({ open: false, data: null });
 
       getAllPosts();
-    }catch (error) {
+    } catch (error) {
       console.error("Error deleting post:", error);
     }
   };
@@ -125,33 +125,38 @@ const BlogPosts = () => {
             />
           ))}
 
-         {page < totalPages && (<div className="flex items-center justify-center mb-8">
-            <button
-              className="flex items-center gap-3 text-sm text-white font-medium bg-black px-7 py-2 rounded-md hover:bg-gray-900 text-nowrap disabled:bg-gray-400 cursor-pointer hover:scale-105 transition-all"
-              onClick={handleLoadMore}
-              disabled={isLoading}   
-            >
-              {isLoading ? (
-                <LuLoaderCircle className="animate-spin text-2xl text-amber-700" />
-              ) : (
-                <LuGalleryVerticalEnd className="text-2xl" />
-              )}{" "}
-              {isLoading ? "Loading..." : "Load More Posts"}
-            </button>
-          </div>)}
+          {page < totalPages && (
+            <div className="flex items-center justify-center mb-8">
+              <button
+                className="flex items-center gap-3 text-sm text-white font-medium bg-black px-7 py-2 rounded-md hover:bg-gray-900 text-nowrap disabled:bg-gray-400 cursor-pointer hover:scale-105 transition-all"
+                onClick={handleLoadMore}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <LuLoaderCircle className="animate-spin text-2xl text-amber-700" />
+                ) : (
+                  <LuGalleryVerticalEnd className="text-2xl" />
+                )}{" "}
+                {isLoading ? "Loading..." : "Load More Posts"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <Modal
         isOpen={openDeleteAlert?.open}
         onClose={() => setOpenDeleteAlert({ open: false, data: null })}
-        title="Delete Blog Post">
-          <div className="w-[70vw] md:w-[50vw]">
-            <DeleteAlertContent content="Are you sure you want to delete this blog post?" onDelete={() => deletePost(openDeleteAlert?.data)}/>
-          </div>
-        </Modal>
+        title="Delete Blog Post"
+      >
+        <div className="w-[70vw] md:w-[50vw]">
+          <DeleteAlertContent
+            content="Are you sure you want to delete this blog post?"
+            onDelete={() => deletePost(openDeleteAlert?.data)}
+          />
+        </div>
+      </Modal>
     </DashboardLayout>
   );
 };
-
 
 export default BlogPosts;

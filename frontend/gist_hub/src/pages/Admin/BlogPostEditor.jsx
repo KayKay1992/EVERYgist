@@ -21,6 +21,7 @@ import SkeletonLoader from "../../components/Loader/SkeletonLoader";
 import BlogPostIdeaCard from "../../components/Cards/BlogPostIdeaCard";
 import GenerateBlogPostForm from "./components/GenerateBlogPostForm";
 import Modal from "../../components/Modal";
+import DeleteAlertContent from "../../components/DeleteAlertContent";
 
 const BlogPostEditor = ({ isEdit }) => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ const BlogPostEditor = ({ isEdit }) => {
         API_PATHS.AI.GENERATE_BLOG_POST_IDEAS,
         {
           topics:
-            "SPORTS, HEALTH, TECHNOLOGY, EDUCATION, POLITICS TECHNOLOGY, LOCAL NEWS ",
+            "SPORTS, HEALTH, TECHNOLOGY, EDUCATION, POLITICS, TECHNOLOGY, LOCAL NEWS ",
         }
       );
       const generatedIdeas = aiResponse.data || [];
@@ -153,10 +154,41 @@ const BlogPostEditor = ({ isEdit }) => {
   };
 
   //Get Post data by slug
-  const fetchPostDetailsBySlug = async () => {};
+  const fetchPostDetailsBySlug = async () => {
+    try {
+      const response = await axiosInstance.get(
+        API_PATHS.POSTS.GET_BY_SLUG(postSlug)
+      );
+      if (response.data) {
+        const data = response.data;
+        setPostData((prevState) => ({
+          ...prevState,
+          id: data._id,
+          title: data.title,
+          content: data.content,
+          coverPreview: data.coverImageUrl,
+          tags: data.tags,
+          isDraft: data.isDraft,
+          generatedByAI: data.generatedByAI,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching post details by slug:", error);
+    }
+  };
 
   //Delete blog post
-  const deletePost = async () => {};
+  const deletePost = async () => {
+    try{
+      await axiosInstance.delete(API_PATHS.POSTS.DELETE(postData.id));
+      toast.success("Blog Post Deleted Successfully");
+      setOpenDeleteAlert(false);
+      navigate("/admin/posts");
+    }catch (error) {
+      console.error("Error deleting post:", error);
+      toast.error("Failed to delete blog post. Please try again.");
+    }
+  };
 
   useEffect(() => {
     if (isEdit) {
@@ -365,6 +397,20 @@ const BlogPostEditor = ({ isEdit }) => {
             });
           }}
         />
+      </Modal>
+
+      <Modal
+        isOpen={openDeleteAlert}
+        onClose={() => setOpenDeleteAlert(false)}
+        title="Delete Blog Post"
+       
+      >
+        <div className="p-4 w-[30vw]">
+          <DeleteAlertContent
+            content="Are you sure you want to delete this blog post?"
+            onDelete={() => deletePost()}
+            />
+        </div>
       </Modal>
     </DashboardLayout>
   );
