@@ -34,7 +34,39 @@ const CommentInfoCard = ({
   };
 
   //Add a reply
-  const handleAddReply = async () => {};
+  const handleAddReply = async () => {
+    try {
+      // Validate reply text
+      if (!replyText || !replyText.trim()) {
+        toast.error("Reply cannot be empty");
+        return;
+      }
+
+      // Get the post ID (should exist from the comment data)
+      const postId = post?._id;
+      if (!postId) {
+        toast.error("Unable to add reply. Post information is missing.");
+        return;
+      }
+
+      // Make API call to add reply
+      const response = await axiosInstance.post(
+        API_PATHS.COMMENTS.ADD(post._id),
+        {
+          content: replyText,
+          parentComment: commentId,
+        }
+      );
+
+      toast.success("Reply added successfully");
+      setShowReplyForm(false);
+      setReplyText("");
+      getAllComments();
+    } catch (error) {
+      console.error("Error adding reply:", error);
+      toast.error("Failed to add reply. Please try again.");
+    }
+  };
 
   return (
     <div
