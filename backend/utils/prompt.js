@@ -27,7 +27,7 @@ function generateReplyPrompt(comment) {
     const content = comment.content || "";
     return `You are replying to a blog comment made by ${authorName}. The comment content is as follows:
 "${content}"
-Generate a thoughtful and relevant reply to this comment. Ensure the reply is respectful, engaging, and adds value to the discussion. Keep the reply concise, ideally between 50 to 200 words.`;
+Generate a thoughtful and relevant reply to this comment. Ensure the reply is respectful, engaging, and adds value to the discussion. Keep the reply concise.`;
 }
 
 const postSummaryPrompt = (blogContent) => (

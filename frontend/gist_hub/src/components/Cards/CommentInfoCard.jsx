@@ -38,102 +38,131 @@ const CommentInfoCard = ({
 
   return (
     <div
-      className={`bg-white p-3 rounded-lg cursor-pointer group ${
-        isSubReply ? "mb-1" : "mb-4"
+      className={`relative bg-white backdrop-blur-sm border border-gray-100 hover:border-sky-200 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group overflow-hidden ${
+        isSubReply ? "mb-2 p-3" : "mb-4 p-5"
       }`}
     >
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-12 md:col-span-6 lg:col-span-8 flex gap-3 order-2 md:order-1">
-          <div className="flex items-start gap-3">
-            <img
-              src={authorPhoto}
-              alt={authorName}
-              className="w-10 h-10 rounded-full"
-            />
+      {/* Decorative gradient accent - appears on hover */}
+      <div className="absolute inset-0 bg-gradient-to-r from-sky-50/0 via-sky-50/50 to-purple-50/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-[12px] text-gray-500 font-medium">
+      <div className="relative grid grid-cols-12 gap-4">
+        <div className="col-span-12 md:col-span-6 lg:col-span-8 flex gap-4 order-2 md:order-1">
+          <div className="flex items-start gap-3 w-full">
+            {/* Enhanced Avatar with status ring */}
+            <div className="relative flex-shrink-0">
+              <img
+                src={authorPhoto}
+                alt={authorName}
+                className="w-12 h-12 rounded-full ring-2 ring-sky-100 group-hover:ring-sky-300 transition-all duration-300 object-cover shadow-md"
+              />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              {/* Author info with enhanced typography */}
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-[13px] text-gray-800 font-semibold hover:text-sky-600 transition-colors cursor-pointer">
                   @{authorName}
                 </h3>
-                <LuDot className="text-gray-500" />
-                <span className="text-[12px] text-gray-500 font-medium">
+                <LuDot className="text-gray-300 flex-shrink-0" />
+                <span className="text-[12px] text-gray-400 font-medium">
                   {updatedOn}
                 </span>
               </div>
 
-              <p className="text-sm text-black font-medium">{content}</p>
+              {/* Comment content with better readability */}
+              <p className="text-[15px] text-gray-700 font-normal leading-relaxed mb-3">
+                {content}
+              </p>
 
-              <div className="flex items-center gap-3 mt-1.5">
+              {/* Action buttons with modern styling */}
+              <div className="flex items-center gap-2 flex-wrap">
                 {!isSubReply && (
                   <>
                     <button
-                      className="flex items-center gap-2 text-[13px] font-medium text-sky-950 px-4 py-0.5 rounded-full hover:bg-sky-500 hover:text-white cursor-pointer "
+                      className="group/btn flex items-center gap-2 text-[13px] font-semibold text-sky-600 hover:text-white px-4 py-1.5 rounded-lg hover:bg-gradient-to-r hover:from-sky-500 hover:to-sky-600 cursor-pointer border border-sky-200 hover:border-sky-500 transition-all duration-200 hover:scale-105 hover:shadow-md"
                       onClick={() =>
                         setShowReplyForm((prevState) => !prevState)
                       }
                     >
-                      <LuReply className="" /> Reply
+                      <LuReply className="text-[14px] group-hover/btn:rotate-12 transition-transform" />
+                      <span>Reply</span>
                     </button>
                     <button
-                      className="flex items-center gap-1.5 text-[13px] font-medium px-4 py-0.5 text-sky-950 bg-sky-50  rounded-full hover:bg-sky-500 hover:text-white cursor-pointer "
+                      className="group/btn flex items-center gap-2 text-[13px] font-semibold text-gray-600 hover:text-white px-4 py-1.5 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 hover:from-sky-500 hover:to-sky-600 cursor-pointer border border-gray-200 hover:border-sky-500 transition-all duration-200 hover:scale-105 hover:shadow-md"
                       onClick={() =>
                         setShowSubReplies((prevState) => !prevState)
                       }
                     >
-                      {replies?.length || 0}
-                      {replies?.length == 1 ? "reply" : "replies"}{" "}
+                      <span className="flex items-center gap-1.5">
+                        <span className="font-bold">
+                          {replies?.length || 0}
+                        </span>
+                        <span>
+                          {replies?.length == 1 ? "reply" : "replies"}
+                        </span>
+                      </span>
                       <LuChevronDown
-                        className={`
-                    ${showSubReplies ? "rotate-180" : ""}`}
+                        className={`text-[14px] transition-transform duration-300 ${
+                          showSubReplies ? "rotate-180" : ""
+                        }`}
                       />
-                    </button>{" "}
+                    </button>
                   </>
                 )}
 
                 <button
-                  className="flex items-center gap-1.5 text-[13px] font-medium text-sky-950 bg-sky-50 px-4 py-0.5  rounded-full hover:bg-rose-500 hover:text-white cursor-pointer "
+                  className="group/btn flex items-center gap-2 text-[13px] font-semibold text-rose-600 hover:text-white px-4 py-1.5 rounded-lg hover:bg-gradient-to-r hover:from-rose-500 hover:to-rose-600 cursor-pointer border border-rose-200 hover:border-rose-500 transition-all duration-200 hover:scale-105 hover:shadow-md ml-auto"
                   onClick={() => onDelete(commentId)}
                 >
-                  <LuTrash2 /> Delete
+                  <LuTrash2 className="text-[14px] group-hover/btn:scale-110 transition-transform" />
+                  <span>Delete</span>
                 </button>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Blog post reference with enhanced visuals */}
         {!isSubReply && (
-          <div className="col-span-12 md:col-span-6 lg:col-span-4 order-1 md:order-2 flex items-center gap-1.5">
+          <div className="col-span-12 md:col-span-6 lg:col-span-4 order-1 md:order-2 flex items-start gap-3 p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 border border-gray-100 hover:border-sky-200 transition-all duration-300 group/post hover:shadow-md">
             <img
               src={post?.coverImageUrl}
               alt="post cover"
-              className="w-10 h-10 rounded-md object-cover"
+              className="w-14 h-14 rounded-lg object-cover shadow-sm ring-2 ring-gray-100 group-hover/post:ring-sky-300 transition-all duration-300"
             />
-            <div className="flex-1">
-              <div className="flex items-center gap-1">
-                <h4 className="text-xs text-gray-500 font-medium">
-                  {post?.title}
-                </h4>
-              </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] uppercase tracking-wide text-gray-400 font-bold mb-1 block">
+                Post Reference
+              </span>
+              <h4 className="text-[13px] text-gray-700 font-semibold line-clamp-2 group-hover/post:text-sky-600 transition-colors leading-tight">
+                {post?.title}
+              </h4>
             </div>
           </div>
         )}
       </div>
-      ;{!isSubReply && showReplyForm && (
-      <CommentReplyInput
-         user={user}
-         authorName={authorName}
-         content={content}
-         replyText={replyText}
-         setReplyText={setReplyText}
-         handleAddReply={handleAddReply}
-         handleCancelReply={handleCancelReply}
-      />
+
+      {/* Reply Input Form */}
+      {!isSubReply && showReplyForm && (
+        <CommentReplyInput
+          user={user}
+          authorName={authorName}
+          content={content}
+          replyText={replyText}
+          setReplyText={setReplyText}
+          handleAddReply={handleAddReply}
+          handleCancelReply={handleCancelReply}
+        />
       )}
-      {showSubReplies &&
-        replies?.length > 0 &&
-        replies.map((comment, index) => (
-          <div key={comment._id} className={`ml-3 ${index == 0 ? "mt-5" : ""}`}>
+
+      {/* Nested Replies with improved spacing */}
+      {showSubReplies && replies?.length > 0 && (
+        <div className="mt-5 ml-4 space-y-2 pl-4 border-l-2 border-gradient-to-b from-sky-200 via-sky-100 to-transparent">
+          {replies.map((comment, index) => (
             <CommentInfoCard
+              key={comment._id}
+              commentId={comment._id}
               authorName={comment.author.name}
               authorPhoto={comment.author.profileImageUrl}
               content={comment.content}
@@ -147,8 +176,9 @@ const CommentInfoCard = ({
               }
               onDelete={() => onDelete(comment._id)}
             />
-          </div>
-        ))}
+          ))}
+        </div>
+      )}
     </div>
   );
 };

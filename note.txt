@@ -1,609 +1,570 @@
 ==============================================================================
-MANAGE COMMENTS PAGE IMPLEMENTATION
+GENERATE AI REPLY FOR COMMENT IMPLEMENTATION
 ==============================================================================
 
 OVERVIEW
 --------
-Implemented a comprehensive comments management system for administrators to
-view, manage, and delete comments across all blog posts. The system features
-a hierarchical comment structure with nested replies, showing parent comments
-alongside their sub-replies with proper organization and visual hierarchy.
+Implemented an AI-powered comment reply generation feature using Google's 
+Gemini 2.0 Flash Lite model. This feature allows users to automatically 
+generate thoughtful, contextual replies to blog comments with a single click, 
+enhancing user engagement and reducing response time.
 
 KEY FEATURES
 ------------
-1. Display All Comments Across All Blog Posts
-2. Show Associated Blog Post Information (Title + Cover Image)
-3. Hierarchical Comment Display (Parent Comments + Nested Replies)
-4. Delete Comments (Parent and Sub-Replies)
-5. Expand/Collapse Replies
-6. Reply to Comments (with Reply Input Component)
-7. Real-time Date Formatting
-8. Author Information Display
+1. Context-Aware AI Reply Generation
+2. One-Click Reply Generation
+3. Loading States with Visual Feedback
+4. Automatic Text Population
+5. User Can Edit Generated Reply Before Posting
+6. Premium UI with Gradient Styling
+7. Integration with CommentReplyInput Component
 
 ==============================================================================
 IMPLEMENTATION STEPS
 ==============================================================================
 
-STEP 1: BACKEND - COMMENT MODEL STRUCTURE
-------------------------------------------
-The Comment model supports hierarchical threading through the parentComment field:
+STEP 1: BACKEND - AI PROMPT ENGINEERING
+----------------------------------------
+Created a specialized prompt for generating comment replies in utils/prompt.js:
 
-Schema Definition (models/Comment.js):
-const commentSchema = new mongoose.Schema({
-  post: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "BlogPost",
-    required: true,
-  },
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  content: {
-    type: String,
-    required: true,
-  },
-  parentComment: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Comment",
-    default: null,
-  },
-}, { timestamps: true });
+function generateReplyPrompt(comment) {
+    const authorName = comment.author?.name || "User";
+    const content = comment.content || "";
+    
+    return `You are replying to a blog comment made by ${authorName}. 
+The comment content is as follows:
+"${content}"
 
-Key Fields:
-- post: Reference to the blog post being commented on
-- author: Reference to the user who created the comment
-- content: The actual comment text
-- parentComment: Reference to parent comment (null for top-level comments)
-- timestamps: Auto-generated createdAt and updatedAt fields
-
-STEP 2: BACKEND - GET ALL COMMENTS ENDPOINT
---------------------------------------------
-Created getAllComments() function to fetch and organize all comments with
-their nested replies:
-
-Controller Function (commentController.js):
-
-const getAllComments = async (req, res) => {
-  try {
-    // 1. Fetch all comments with populated author and post details
-    const comments = await Comment.find()
-      .populate("author", "name profileImageUrl")
-      .populate("post", "title coverImageUrl")
-      .sort({ createdAt: 1 });
-
-    // 2. Create a comment map for O(1) lookup during nesting
-    const commentMap = {};
-    comments.forEach((comment) => {
-      comment = comment.toObject(); // Convert Mongoose doc to plain object
-      comment.replies = []; // Initialize empty replies array
-      commentMap[comment._id] = comment;
-    });
-
-    // 3. Nest replies under their parent comments
-    const nestedComments = [];
-    comments.forEach((comment) => {
-      if (comment.parentComment) {
-        // This is a reply - add to parent's replies array
-        const parent = commentMap[comment.parentComment];
-        if (parent) {
-          parent.replies.push(commentMap[comment._id]);
-        }
-      } else {
-        // This is a top-level comment - add to root array
-        nestedComments.push(commentMap[comment._id]);
-      }
-    });
-
-    res.json(nestedComments);
-  } catch (error) {
-    res.status(500).json({ 
-      message: "Failed to retrieve comments", 
-      error: error.message 
-    });
-  }
-};
-
-Algorithm Explanation:
-1. Fetch all comments from database with populated references
-2. Create a hash map (commentMap) for efficient lookups
-3. Initialize empty replies array for each comment
-4. Iterate through comments and build hierarchy:
-   - If parentComment exists: Add to parent's replies array
-   - If parentComment is null: Add to root nestedComments array
-5. Return only top-level comments (replies are nested within)
-
-Response Structure:
-[
-  {
-    _id: "comment1",
-    content: "Parent comment",
-    author: { name: "John", profileImageUrl: "..." },
-    post: { title: "Blog Post Title", coverImageUrl: "..." },
-    parentComment: null,
-    replies: [
-      {
-        _id: "comment2",
-        content: "Reply to parent",
-        author: { name: "Jane", profileImageUrl: "..." },
-        parentComment: "comment1",
-        replies: []
-      }
-    ]
-  }
-]
-
-API Route:
-GET /api/comments
-Access: Private (Admin only)
-
-STEP 3: BACKEND - DELETE COMMENT ENDPOINT
-------------------------------------------
-Implemented cascading delete to remove comment and all its replies:
-
-const deleteComment = async (req, res) => {
-  try {
-    const { commentId } = req.params;
-
-    const comment = await Comment.findById(commentId);
-    if (!comment) {
-      return res.status(404).json({ message: "Comment not found" });
-    }
-
-    // Delete the comment itself
-    await comment.deleteOne({ _id: commentId });
-
-    // Delete all replies to this comment (cascade delete)
-    await Comment.deleteMany({ parentComment: commentId });
-
-    res.status(200).json({ 
-      message: "Comment and its replies deleted successfully" 
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      message: "Failed to delete comment", 
-      error: error.message 
-    });
-  }
-};
-
-Key Features:
-- Validates comment exists before deletion
-- Deletes parent comment
-- Cascades deletion to all child replies (one level)
-- Returns success confirmation
-
-API Route:
-DELETE /api/comments/:commentId
-Access: Private (Admin only)
-
-STEP 4: FRONTEND - API PATHS CONFIGURATION
--------------------------------------------
-Added comment endpoints to API_PATHS utility:
-
-COMMENTS: {
-  ADD: (postId) => `/api/comments/${postId}`,
-  GET_ALL_BY_POST: (postId) => `/api/comments/${postId}`,
-  DELETE: (commentId) => `/api/comments/${commentId}`,
-  GET_ALL: `/api/comments`,
+Generate a thoughtful and relevant reply to this comment. Ensure the reply 
+is respectful, engaging, and adds value to the discussion. Keep the reply 
+concise.`;
 }
 
-STEP 5: FRONTEND - COMMENTS PAGE COMPONENT
--------------------------------------------
-Created Comments.jsx page to manage all comments:
+Prompt Engineering Strategy:
+1. Provide context about who made the comment (authorName)
+2. Include the full comment content for context
+3. Set clear expectations for reply characteristics:
+   - Thoughtful and relevant
+   - Respectful tone
+   - Engaging and valuable
+   - Concise length
+4. Natural language instructions for better AI understanding
 
-Component Structure (pages/Admin/Comments.jsx):
+Key Benefits of This Prompt:
+- Contextual awareness (knows who is being replied to)
+- Content-driven responses (based on actual comment)
+- Quality guidelines (respectful, engaging, valuable)
+- Length control (concise replies)
 
-import React, { useState, useEffect } from "react";
-import DashboardLayout from "../../components/layouts/DashboardLayout";
-import CommentInfoCard from "../../components/Cards/CommentInfoCard";
-import axiosInstance from "../../utils/axioInstance";
-import { API_PATHS } from "../../utils/apiPaths";
-import moment from "moment";
+STEP 2: BACKEND - AI CONTROLLER ENDPOINT
+-----------------------------------------
+Implemented generateCommentReply function in aiController.js:
 
-const Comments = () => {
-  const navigate = useNavigate();
-  const [comments, setComments] = useState([]);
-  const [openDeleteAlert, setOpenDeleteAlert] = useState({
-    open: false,
-    data: null,
-  });
+const generateCommentReply = async (req, res) => {
+  try {
+    const { author, content } = req.body;
 
-  // Fetch all comments from backend
-  const getAllComments = async () => {
-    try {
-      const response = await axiosInstance.get(API_PATHS.COMMENTS.GET_ALL);
-      setComments(response.data?.length > 0 ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching comments:", error);
+    // Validation: Ensure comment content is provided
+    if (!content) {
+      return res.status(400).json({ message: "Comment is required" });
     }
-  };
 
-  // Delete comment handler (to be implemented)
-  const deleteComment = async (commentId) => {
-    // Will handle deletion with confirmation modal
-  };
+    // Generate prompt using helper function
+    const prompt = generateReplyPrompt({ author, content });
 
-  // Fetch comments on component mount
-  useEffect(() => {
-    getAllComments();
-    return () => {};
-  }, []);
+    // Call Google Gemini API
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash-lite",
+      contents: prompt,
+    });
 
-  return (
-    <DashboardLayout activeMenu="Comments">
-      <div className="w-auto sm:max-w-[900px] mx-auto">
-        <h2 className="text-2xl font-semibold mt-5 mb-5">Comments</h2>
+    // Extract generated text
+    let rawText = response.text || "";
 
-        {comments.map((comment) => (
-          <CommentInfoCard
-            key={comment._id}
-            commentId={comment._id}
-            authorName={comment.author.name}
-            authorPhoto={comment.author.profileImageUrl}
-            content={comment.content}
-            updatedOn={
-              comment.updatedAt 
-                ? moment(comment.updatedAt).format("Do MMM YYYY") 
-                : "-"
-            }
-            post={comment.post}
-            replies={comment.replies || []}
-            getAllComments={getAllComments}
-            onDelete={(commentId) =>
-              setOpenDeleteAlert({
-                open: true,
-                data: commentId || comment._id,
-              })
-            }
-          />
-        ))}
-      </div>
-    </DashboardLayout>
-  );
+    // Return plain text reply
+    res.status(200).json(rawText);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate comment reply",
+      error: error.message,
+    });
+  }
 };
 
-Key Implementation Details:
-1. State Management:
-   - comments: Array of comment objects with nested replies
-   - openDeleteAlert: Object with open status and comment ID
+API Endpoint Details:
+- Route: POST /api/ai/generate-reply
+- Access: Private (requires authentication via protect middleware)
+- Request Body:
+  {
+    "author": { "name": "John Doe" },
+    "content": "Great article! I learned a lot about React hooks."
+  }
+- Response: Plain text string (generated reply)
+- Error Handling: 400 for missing content, 500 for generation errors
 
-2. getAllComments():
-   - Fetches all comments via API
-   - Sets empty array if no comments returned
-   - Error handling with console logging
+Implementation Notes:
+1. Uses Google Gemini 2.0 Flash Lite model (fast, efficient)
+2. No JSON parsing needed (returns plain text)
+3. Simple response structure for easy frontend integration
+4. Protected route ensures only authenticated users can generate replies
 
-3. Rendering:
-   - Maps through top-level comments only
-   - Passes replies array to CommentInfoCard (handled recursively)
-   - Formats date using moment.js
-   - onDelete triggers modal with comment ID
+STEP 3: BACKEND - ROUTE REGISTRATION
+-------------------------------------
+Added the route in aiRoutes.js:
 
-STEP 6: COMMENT INFO CARD COMPONENT
-------------------------------------
-Created reusable CommentInfoCard component for displaying comments:
+const {
+    generateBlogPost,
+    generatedBlogIdeas,
+    generateCommentReply,  // ← New import
+    generatePostSummary,
+} = require('../controllers/aiController');
+
+router.post('/generate-reply', protect, generateCommentReply);
+
+Route Configuration:
+- Path: /api/ai/generate-reply
+- Method: POST
+- Middleware: protect (authentication required)
+- Handler: generateCommentReply
+
+STEP 4: FRONTEND - API PATH CONFIGURATION
+------------------------------------------
+Added endpoint to API_PATHS utility (utils/apiPaths.js):
+
+AI: {
+  GENERATE_BLOG_POST: `/api/ai/generate`,
+  GENERATE_BLOG_POST_IDEAS: `/api/ai/generate-ideas`,
+  GENERATE_COMMENT_REPLY: `/api/ai/generate-reply`,  // ← New endpoint
+  GENERATE_POST_SUMMARY: `/api/ai/generate-summary`,
+}
+
+STEP 5: FRONTEND - COMMENT REPLY INPUT COMPONENT
+-------------------------------------------------
+Implemented AI generation logic in CommentReplyInput.jsx:
 
 Component Props:
-- commentId: Unique comment identifier
-- authorName: Name of comment author
-- authorPhoto: Profile image URL
-- content: Comment text
-- updatedOn: Formatted date string
-- post: Associated blog post object (title, coverImageUrl)
-- replies: Array of nested reply comments
-- getAllComments: Function to refresh comment list
-- onDelete: Callback function for deletion
-- isSubReply: Boolean to differentiate parent vs. reply styling
+- user: Current user object (for avatar display)
+- authorName: Name of the comment author being replied to
+- content: Original comment content
+- replyText: State variable for reply text
+- setReplyText: Function to update reply text
+- handleAddReply: Function to submit the reply
+- handleCancelReply: Function to cancel reply
+- disableAutoGen: Optional flag to hide AI button
+- type: "reply" or "new" (determines button labels)
 
-Component Features (CommentInfoCard.jsx):
+Component State:
+const [loading, setLoading] = useState(false);
 
-const CommentInfoCard = ({
-  commentId,
-  authorName,
-  authorPhoto,
-  content,
-  updatedOn,
-  post,
-  replies,
-  getAllComments,
-  onDelete,
-  isSubReply,
-}) => {
-  const { user } = useContext(UserContext);
-  const [replyText, setReplyText] = useState("");
-  const [showReplyForm, setShowReplyForm] = useState(false);
-  const [showSubReplies, setShowSubReplies] = useState(false);
+AI Generation Function:
 
-  // 1. PARENT COMMENT DISPLAY
-  return (
-    <div className={`bg-white p-3 rounded-lg cursor-pointer group ${
-      isSubReply ? "mb-1" : "mb-4"
-    }`}>
-      <div className="grid grid-cols-12 gap-3">
-        {/* Left Section: Comment Content */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-8 flex gap-3 order-2 md:order-1">
-          <img 
-            src={authorPhoto} 
-            alt={authorName} 
-            className="w-10 h-10 rounded-full" 
-          />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-[12px] text-gray-500 font-medium">
-                @{authorName}
-              </h3>
-              <LuDot className="text-gray-500" />
-              <span className="text-[12px] text-gray-500 font-medium">
-                {updatedOn}
-              </span>
-            </div>
-            <p className="text-sm text-black font-medium">{content}</p>
+const generateReply = async () => {
+  setLoading(true);
+  try {
+    // Call backend API with comment context
+    const aiResponse = await axiosInstance.post(
+      API_PATHS.AI.GENERATE_COMMENT_REPLY,
+      {
+        author: { name: authorName },
+        content,
+      }
+    );
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3 mt-1.5">
-              {!isSubReply && (
-                <>
-                  {/* Reply Button */}
-                  <button
-                    className="flex items-center gap-2 text-[13px] font-medium text-sky-950 px-4 py-0.5 rounded-full hover:bg-sky-500 hover:text-white cursor-pointer"
-                    onClick={() => setShowReplyForm((prev) => !prev)}
-                  >
-                    <LuReply /> Reply
-                  </button>
+    // Extract generated reply from response
+    const generatedReply = aiResponse.data;
 
-                  {/* Show/Hide Replies Button */}
-                  <button
-                    className="flex items-center gap-1.5 text-[13px] font-medium px-4 py-0.5 text-sky-950 bg-sky-50 rounded-full hover:bg-sky-500 hover:text-white cursor-pointer"
-                    onClick={() => setShowSubReplies((prev) => !prev)}
-                  >
-                    {replies?.length || 0}
-                    {replies?.length == 1 ? " reply" : " replies"}
-                    <LuChevronDown
-                      className={`${showSubReplies ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                </>
-              )}
-
-              {/* Delete Button */}
-              <button
-                className="flex items-center gap-1.5 text-[13px] font-medium text-sky-950 bg-sky-50 px-4 py-0.5 rounded-full hover:bg-rose-500 hover:text-white cursor-pointer"
-                onClick={() => onDelete(commentId)}
-              >
-                <LuTrash2 /> Delete
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Section: Associated Blog Post (only for parent comments) */}
-        {!isSubReply && (
-          <div className="col-span-12 md:col-span-6 lg:col-span-4 order-1 md:order-2 flex items-center gap-1.5">
-            <img
-              src={post?.coverImageUrl}
-              alt="post cover"
-              className="w-10 h-10 rounded-md object-cover"
-            />
-            <div className="flex-1">
-              <h4 className="text-xs text-gray-500 font-medium">
-                {post?.title}
-              </h4>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 2. REPLY INPUT FORM (shown when Reply button clicked) */}
-      {!isSubReply && showReplyForm && (
-        <CommentReplyInput
-          user={user}
-          authorName={authorName}
-          content={content}
-          replyText={replyText}
-          setReplyText={setReplyText}
-          handleAddReply={handleAddReply}
-          handleCancelReply={handleCancelReply}
-        />
-      )}
-
-      {/* 3. NESTED REPLIES (recursive rendering) */}
-      {showSubReplies &&
-        replies?.length > 0 &&
-        replies.map((comment, index) => (
-          <div key={comment._id} className={`ml-3 ${index == 0 ? "mt-5" : ""}`}>
-            <CommentInfoCard
-              commentId={comment._id}
-              authorName={comment.author.name}
-              authorPhoto={comment.author.profileImageUrl}
-              content={comment.content}
-              post={comment.post}
-              replies={comment.replies || []}
-              isSubReply={true}
-              updatedOn={
-                comment.updatedAt
-                  ? moment(comment.updatedAt).format("Do MMM YYYY")
-                  : "-"
-              }
-              onDelete={() => onDelete(comment._id)}
-            />
-          </div>
-        ))}
-    </div>
-  );
+    // Populate reply text input if generation successful
+    if (generatedReply?.length > 0) {
+      setReplyText(generatedReply);
+    }
+  } catch (error) {
+    console.error("Error generating AI reply:", error);
+  } finally {
+    // Always reset loading state
+    setLoading(false);
+  }
 };
 
-STEP 7: KEY IMPLEMENTATION PATTERNS
-------------------------------------
+Function Flow:
+1. Set loading state to true (shows spinner)
+2. Make POST request to /api/ai/generate-reply
+3. Pass author name and comment content as context
+4. Receive generated reply text
+5. Validate reply has content (length > 0)
+6. Populate input field via setReplyText()
+7. Reset loading state in finally block
+8. Handle errors gracefully with console logging
 
-1. RECURSIVE COMPONENT RENDERING
-   The CommentInfoCard component renders itself recursively for nested replies:
-   
-   - Parent Comment (isSubReply = false):
-     * Shows blog post information
-     * Shows Reply and View Replies buttons
-     * Can expand/collapse reply form and replies list
-   
-   - Sub-Reply (isSubReply = true):
-     * Hides blog post information
-     * Hides Reply and View Replies buttons
-     * Shows only content and Delete button
-     * Indented with ml-3 margin
+Key Implementation Details:
+- Uses axiosInstance (includes auth headers automatically)
+- Passes both author and content for context
+- Validates response before populating
+- Maintains loading state for UX feedback
+- Allows user to edit generated text before submitting
 
-2. CONDITIONAL RENDERING
-   - Blog Post Section: Only shown for parent comments (!isSubReply)
-   - Action Buttons: Reply/View Replies hidden for sub-replies
-   - Reply Form: Only shown when showReplyForm is true
-   - Replies List: Only shown when showSubReplies is true
+STEP 6: FRONTEND - PREMIUM UI IMPLEMENTATION
+---------------------------------------------
+Created eye-catching AI Generate button with modern styling:
 
-3. STATE MANAGEMENT
-   - showReplyForm: Toggle reply input visibility
-   - showSubReplies: Toggle nested replies visibility
-   - replyText: Store reply input value
+{!disableAutoGen && (
+  <button
+    className={`group flex items-center gap-2 text-[13px] font-semibold 
+      text-transparent bg-clip-text bg-gradient-to-r from-purple-600 
+      to-sky-600 px-4 py-2 rounded-lg hover:from-purple-700 
+      hover:to-sky-700 transition-all duration-300 border-2 
+      border-dashed border-purple-200 hover:border-purple-400 
+      hover:scale-105 ${
+        loading 
+          ? "opacity-50 cursor-not-allowed" 
+          : "hover:shadow-lg hover:shadow-purple-100"
+      }`}
+    onClick={generateReply}
+    disabled={loading}
+  >
+    {loading ? (
+      <LuLoaderCircle className="animate-spin text-[16px] text-purple-600" />
+    ) : (
+      <LuWandSparkles className="text-[16px] text-purple-600 
+        group-hover:rotate-12 transition-transform duration-300" />
+    )}
+    <span className="hidden sm:inline">
+      {loading ? "Generating..." : "AI Generate"}
+    </span>
+  </button>
+)}
 
-4. DELETE HANDLER PATTERN
-   Fixed onDelete prop confusion:
-   
-   BEFORE (INCORRECT):
-   - Props: openDelete (wrong name)
-   - Usage: onDelete() (no argument passed)
-   
-   AFTER (CORRECT):
-   - Props: onDelete (correct name)
-   - Parent Comment: onClick={() => onDelete(commentId)}
-   - Sub-Reply: onDelete={() => onDelete(comment._id)}
-   
-   This ensures the correct comment ID is passed up the chain to trigger
-   the delete modal in the parent Comments page.
+Premium Styling Features:
 
-5. CALLBACK FLOW
-   Comments.jsx → CommentInfoCard (Parent) → CommentInfoCard (Reply)
-   
-   When delete clicked on any comment:
-   1. CommentInfoCard calls onDelete(commentId)
-   2. Comments.jsx receives commentId
-   3. Sets openDeleteAlert state with comment ID
-   4. Shows confirmation modal (to be implemented)
-   5. On confirm: Calls deleteComment(commentId)
-   6. Refreshes list via getAllComments()
+1. GRADIENT TEXT:
+   - text-transparent bg-clip-text
+   - bg-gradient-to-r from-purple-600 to-sky-600
+   - Creates stunning gradient text effect
+   - Hover changes to darker purple/sky
 
-==============================================================================
-RESPONSIVE DESIGN IMPLEMENTATION
-==============================================================================
+2. DASHED BORDER:
+   - border-2 border-dashed border-purple-200
+   - Hover transitions to border-purple-400
+   - Visually distinct from other buttons
+   - Emphasizes AI/magical nature
 
-Grid Layout:
-- Mobile: Single column, blog post info appears above comment
-- Tablet/Desktop: Split layout (8 cols content, 4 cols post info)
+3. INTERACTIVE ANIMATIONS:
+   - hover:scale-105 (button grows on hover)
+   - Icon rotates 12 degrees on hover (rotate-12)
+   - Spinner animation when loading (animate-spin)
+   - Shadow grows on hover (hover:shadow-lg)
+   - Purple-tinted shadow (shadow-purple-100)
 
-Column Order:
-- order-2 md:order-1: Comment content (left on desktop, bottom on mobile)
-- order-1 md:order-2: Blog post info (right on desktop, top on mobile)
+4. LOADING STATES:
+   - Shows spinning loader icon when generating
+   - Changes text to "Generating..."
+   - Opacity reduces to 50% when disabled
+   - Cursor changes to not-allowed
+   - Button remains disabled during API call
 
-Spacing:
-- Parent Comments: mb-4 (larger margin)
-- Sub-Replies: mb-1 (compact spacing)
-- First Reply: mt-5 (top margin for separation)
-- Nested Indent: ml-3 (left margin for visual hierarchy)
+5. RESPONSIVE DESIGN:
+   - Text hidden on small screens (hidden sm:inline)
+   - Icon always visible
+   - Maintains usability on mobile
 
-Button Responsiveness:
-- Text labels hidden on small screens
-- Icons always visible
-- Smooth hover transitions with scale effect
+6. COLOR PSYCHOLOGY:
+   - Purple: Associated with magic, creativity, AI
+   - Gradient: Modern, premium feeling
+   - Distinct from blue action buttons
 
-==============================================================================
-DATA FLOW SUMMARY
-==============================================================================
+STEP 7: INTEGRATION WITH COMMENT INFO CARD
+-------------------------------------------
+CommentReplyInput is rendered conditionally in CommentInfoCard.jsx:
 
-1. FETCHING COMMENTS
-   Backend: Comment.find() → populate author/post → nest replies → return
-   Frontend: getAllComments() → setComments(nestedComments)
+{!isSubReply && showReplyForm && (
+  <CommentReplyInput
+    user={user}
+    authorName={authorName}
+    content={content}
+    replyText={replyText}
+    setReplyText={setReplyText}
+    handleAddReply={handleAddReply}
+    handleCancelReply={handleCancelReply}
+  />
+)}
 
-2. DISPLAYING COMMENTS
-   Comments.jsx maps top-level comments
-   → CommentInfoCard receives comment + replies
-   → Recursively renders sub-replies when expanded
+Integration Flow:
+1. User clicks "Reply" button on a comment
+2. showReplyForm state toggles to true
+3. CommentReplyInput component renders
+4. User can either:
+   a. Type reply manually, OR
+   b. Click "AI Generate" button
+5. If AI Generate clicked:
+   - Loading spinner appears
+   - API call to /api/ai/generate-reply
+   - Generated text populates input field
+   - User can edit generated text
+6. User clicks "Reply" or "Post" to submit
+7. handleAddReply() sends reply to backend
 
-3. DELETING COMMENTS
-   User clicks Delete
-   → onDelete(commentId) triggered
-   → Comments.jsx receives ID via callback
-   → setOpenDeleteAlert({ open: true, data: commentId })
-   → Modal shown (to be implemented)
-   → On confirm: DELETE /api/comments/:commentId
-   → Backend deletes comment + cascades to replies
-   → Frontend calls getAllComments() to refresh
-
-==============================================================================
-KEY BENEFITS
-==============================================================================
-
-1. HIERARCHICAL ORGANIZATION
-   - Clear parent-child relationship
-   - Visual indentation for replies
-   - Expandable/collapsible threads
-
-2. EFFICIENT DATA STRUCTURE
-   - Server-side nesting reduces client-side processing
-   - O(1) lookup using comment map
-   - Single API call for all comments
-
-3. REUSABLE COMPONENTS
-   - CommentInfoCard handles both parent and reply rendering
-   - Recursive pattern eliminates code duplication
-   - Flexible prop-based configuration
-
-4. USER EXPERIENCE
-   - See all comments across all posts in one view
-   - Quick context via blog post thumbnail and title
-   - Inline actions (reply, delete, expand/collapse)
-   - Real-time date formatting
-
-5. ADMIN CAPABILITIES
-   - Centralized comment moderation
-   - Delete any comment (with cascade to replies)
-   - View comment distribution across posts
-   - Quick access to comment context
+Props Passed:
+- user: For avatar display in reply form
+- authorName: Who is being replied to (used in prompt)
+- content: Original comment content (used in prompt)
+- replyText: Controlled input value
+- setReplyText: Update input value (populated by AI)
+- handleAddReply: Submit reply function
+- handleCancelReply: Close form and reset state
 
 ==============================================================================
-LESSONS LEARNED - PROP NAMING BUG FIX
+USER EXPERIENCE FLOW
 ==============================================================================
 
-THE BUG:
-In CommentInfoCard component, the onDelete prop was incorrectly named in the
-destructuring but used correctly in the JSX, causing confusion and errors.
+SCENARIO 1: USER WANTS AI ASSISTANCE
+-------------------------------------
+1. User sees a comment: "Great article! I learned a lot about React hooks."
+2. User clicks "Reply" button
+3. Reply form expands below comment
+4. User sees three buttons:
+   - AI Generate (purple gradient, dashed border)
+   - Cancel (gray)
+   - Reply (blue gradient)
+5. User clicks "AI Generate"
+6. Button shows spinning loader: "Generating..."
+7. After 1-2 seconds, input field populates with:
+   "Thank you for your kind words! I'm glad you found the article helpful. 
+    React hooks are indeed powerful tools. Feel free to ask if you have 
+    any questions about implementing them in your projects!"
+8. User can:
+   - Accept as-is and click "Reply"
+   - Edit the generated text
+   - Click "AI Generate" again for new reply
+   - Click "Cancel" to discard
+9. User edits slightly: adds emoji or personal touch
+10. Clicks "Reply" to submit
 
-BEFORE (INCORRECT):
-const CommentInfoCard = ({
-  ...otherProps,
-  openDelete,  // ❌ Wrong prop name
-  isSubReply,
-}) => {
-  // JSX tried to call onDelete() but it wasn't defined
-  <button onClick={() => onDelete()}>Delete</button>  // ❌ Undefined function
-};
+SCENARIO 2: USER PREFERS MANUAL REPLY
+--------------------------------------
+1. User clicks "Reply" button
+2. Reply form appears
+3. User types manually without using AI Generate
+4. Clicks "Reply" to submit
+5. AI button visible but not required
 
-AFTER (CORRECT):
-const CommentInfoCard = ({
-  ...otherProps,
-  onDelete,  // ✅ Correct prop name matches parent
-  isSubReply,
-}) => {
-  // Now onDelete is properly defined and can be called
-  <button onClick={() => onDelete(commentId)}>Delete</button>  // ✅ Works
-};
+SCENARIO 3: AI GENERATION FAILS
+--------------------------------
+1. User clicks "AI Generate"
+2. API call fails (network error, server down, etc.)
+3. Error logged to console
+4. Input field remains empty
+5. Loading state resets
+6. User can try again or type manually
+7. No error message shown to user (graceful degradation)
 
-ROOT CAUSE:
-Copy-paste error or autocomplete mistake during initial development led to
-prop name mismatch between parent component passing onDelete and child
-component expecting openDelete.
+==============================================================================
+TECHNICAL ARCHITECTURE
+==============================================================================
 
-THE FIX:
-1. Changed destructured prop name from openDelete → onDelete (line 21)
-2. Added commentId argument: onDelete() → onDelete(commentId) (line 96)
-3. Ensured consistency across parent and sub-reply components
+DATA FLOW DIAGRAM:
+------------------
+User Click "AI Generate"
+    ↓
+CommentReplyInput.generateReply()
+    ↓
+axiosInstance.post(/api/ai/generate-reply, { author, content })
+    ↓
+Backend: aiRoutes → protect middleware
+    ↓
+Backend: aiController.generateCommentReply()
+    ↓
+Backend: generateReplyPrompt({ author, content })
+    ↓
+Google Gemini AI API (gemini-2.0-flash-lite)
+    ↓
+Backend: response.text (generated reply)
+    ↓
+Frontend: aiResponse.data
+    ↓
+setReplyText(generatedReply)
+    ↓
+Input field populated
+    ↓
+User edits/accepts
+    ↓
+handleAddReply() → Submit to backend
 
-LESSON:
-Always verify prop names match exactly between parent and child components.
-Use TypeScript or PropTypes to catch these errors during development.
+STATE MANAGEMENT:
+-----------------
+CommentReplyInput Component:
+- loading: boolean (AI generation in progress)
+
+Parent Component (CommentInfoCard):
+- replyText: string (reply content)
+- showReplyForm: boolean (toggle reply form visibility)
+
+API ENDPOINTS INVOLVED:
+-----------------------
+1. POST /api/ai/generate-reply
+   - Generate AI reply for comment
+   - Auth required
+   - Returns: string (generated reply)
+
+2. POST /api/comments/:postId (future - when reply submitted)
+   - Submit the reply to backend
+   - Auth required
+   - Returns: created comment object
+
+DEPENDENCIES:
+-------------
+Frontend:
+- axios (HTTP client)
+- react-hot-toast (notifications - not shown in current flow)
+- react-icons (LuWandSparkles, LuLoaderCircle)
+- Custom components: Input, CommentReplyInput
+
+Backend:
+- @google/genai (Google Generative AI SDK)
+- express (routing)
+- authMiddleware (protect route)
+
+==============================================================================
+KEY BENEFITS & FEATURES
+==============================================================================
+
+1. TIME SAVINGS
+   - Generate replies in 1-2 seconds vs 30-60 seconds typing
+   - Reduces response time for high engagement
+
+2. QUALITY ASSURANCE
+   - AI ensures respectful, thoughtful tone
+   - Consistent quality across all replies
+   - Reduces typos and grammatical errors
+
+3. USER CONTROL
+   - AI is suggestion, not replacement
+   - User can edit generated text
+   - Can regenerate or type manually
+   - Full control over final reply
+
+4. CONTEXT AWARENESS
+   - AI understands who is being replied to
+   - Considers original comment content
+   - Generates relevant, on-topic responses
+
+5. PREMIUM UX
+   - Eye-catching gradient styling
+   - Smooth animations and transitions
+   - Clear loading states
+   - Responsive design
+
+6. ACCESSIBILITY
+   - Works on all devices
+   - Keyboard navigable
+   - Clear visual feedback
+   - Graceful error handling
+
+7. SCALABILITY
+   - Fast model (gemini-2.0-flash-lite)
+   - Minimal API costs
+   - Can handle high volume
+   - Reusable pattern for other AI features
+
+==============================================================================
+CODE REUSABILITY PATTERN
+==============================================================================
+
+The implementation follows a reusable pattern that can be applied to other
+AI generation features:
+
+1. PROMPT ENGINEERING:
+   - Create specialized prompt function
+   - Accept context parameters
+   - Return formatted prompt string
+   - Store in utils/prompt.js
+
+2. BACKEND CONTROLLER:
+   - Validate required inputs
+   - Generate prompt with context
+   - Call ai.models.generateContent()
+   - Return generated text or JSON
+   - Handle errors appropriately
+
+3. ROUTE REGISTRATION:
+   - POST endpoint with descriptive path
+   - Protect with authentication middleware
+   - Connect to controller function
+
+4. FRONTEND API PATH:
+   - Add to API_PATHS utility
+   - Use constants instead of hardcoding
+
+5. FRONTEND COMPONENT:
+   - Create generation function
+   - Manage loading state
+   - Call API with context
+   - Populate result into state
+   - Show visual feedback
+
+This pattern was already used for:
+- Generate Blog Post Ideas
+- Generate Blog Post Content
+- Generate Post Summary
+- ✅ Generate Comment Reply (NEW)
+
+Can be extended for:
+- Generate Comment Suggestions
+- Generate Blog Post Titles
+- Generate SEO Meta Descriptions
+- Generate Social Media Posts
+- Generate Email Responses
+
+==============================================================================
+PERFORMANCE CONSIDERATIONS
+==============================================================================
+
+1. MODEL SELECTION:
+   - gemini-2.0-flash-lite: Optimized for speed
+   - Latency: ~1-2 seconds for reply generation
+   - Cost: Lower than full Gemini model
+   - Quality: Sufficient for comment replies
+
+2. ERROR HANDLING:
+   - Graceful degradation (no error shown to user)
+   - Console logging for debugging
+   - User can retry or type manually
+   - No blocking errors
+
+3. LOADING STATES:
+   - Immediate visual feedback (spinner)
+   - Disabled button during generation
+   - Prevents double-clicking
+   - Clear "Generating..." text
+
+4. OPTIMIZATION OPPORTUNITIES:
+   - Cache common reply patterns (future)
+   - Debounce rapid clicks (future)
+   - Retry logic for failed requests (future)
+   - Progress indicators for long generations (future)
+
+==============================================================================
+LESSONS LEARNED
+==============================================================================
+
+1. PROMPT ENGINEERING MATTERS:
+   - Clear, specific instructions yield better results
+   - Including context (author name, content) improves relevance
+   - Setting tone expectations ensures consistent quality
+
+2. UI/UX FOR AI FEATURES:
+   - Visual distinction important (purple vs blue buttons)
+   - Loading states critical for AI operations
+   - Users need control (edit generated content)
+   - Graceful failures maintain user trust
+
+3. INTEGRATION PATTERNS:
+   - Consistent API structure speeds development
+   - Reusable prompt functions reduce code duplication
+   - Centralized API paths improve maintainability
+
+4. USER EXPECTATIONS:
+   - AI as assistance, not replacement
+   - Fast response times expected (<3 seconds)
+   - Quality should match or exceed manual replies
+   - Option to regenerate appreciated
 
 ==============================================================================
