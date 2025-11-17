@@ -7,6 +7,9 @@ import moment from "moment";
 import CommentInfoCard from "../../components/Cards/CommentInfoCard";
 import axiosInstance from "../../utils/axioInstance";
 import { API_PATHS } from "../../utils/apiPaths";
+import toast from "react-hot-toast";
+import Modal from "../../components/Modal";
+import DeleteAlertContent from "../../components/DeleteAlertContent";
 
 const Comments = () => {
   const navigate = useNavigate();
@@ -28,7 +31,16 @@ const Comments = () => {
   };
 
    //delete comment
-  const deleteComment = async (commentId) => {};
+  const deleteComment = async (commentId) => {
+    try {
+      await axiosInstance.delete(API_PATHS.COMMENTS.DELETE(commentId));
+      toast.success("Comment Deleted Successfully");
+      setOpenDeleteAlert({ open: false, data: null });
+      getAllComments();
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+    }
+  };
 
   //on mount
   useEffect(() => {
@@ -59,6 +71,19 @@ const Comments = () => {
        />
       ))}
     </div>
+    {/* Delete Confirmation Alert */}
+    <Modal
+      isOpen={openDeleteAlert?.open}
+      onClose={() => setOpenDeleteAlert({ open: false, data: null })}
+      title="Delete Comment"
+      >
+      <div className="w-[50vw] md:max-w-md mx-auto">
+        <DeleteAlertContent
+          content="Are you sure you want to delete this comment?"
+          onDelete={() => deleteComment(openDeleteAlert?.data)}
+        />
+      </div>
+      </Modal>
   </DashboardLayout>;
     
 }

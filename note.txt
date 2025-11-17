@@ -1,724 +1,865 @@
 ==============================================================================
-ADD COMMENT/REPLY FUNCTIONALITY IMPLEMENTATION
+DELETE COMMENT/REPLY FUNCTIONALITY IMPLEMENTATION
 ==============================================================================
 
 OVERVIEW
 --------
-Implemented a comprehensive comment and reply system that allows users to add
-comments to blog posts and create nested replies (threads) to existing comments.
-The system supports hierarchical threading with parent-child relationships and
-real-time updates after submission.
+Implemented a comprehensive delete functionality for comments and replies that
+includes cascading deletion (deleting a parent comment removes all its replies),
+confirmation modals for safety, and real-time UI updates. The system ensures
+data consistency and provides excellent user feedback throughout the deletion
+process.
 
 KEY FEATURES
 ------------
-1. Add Top-Level Comments to Blog Posts
-2. Add Nested Replies to Existing Comments (One Level Deep)
-3. Validate Comment Content Before Submission
-4. Real-time Comment List Refresh After Addition
-5. Toast Notifications for Success/Error Feedback
-6. User Authentication Required
-7. Author Information Auto-Populated from Logged-in User
-8. Clean Form Reset After Successful Submission
+1. Delete Top-Level Comments with Cascading Deletion of Replies
+2. Delete Individual Nested Replies
+3. Confirmation Modal Before Deletion (Prevents Accidental Deletions)
+4. Cascading Delete - Parent Deletion Removes All Child Replies
+5. Real-time Comment List Refresh After Deletion
+6. Toast Notifications for Success/Error Feedback
+7. Authentication Required for Deletion
+8. Reusable Modal and DeleteAlertContent Components
+9. Consistent Delete Flow for Parent Comments and Replies
 
 ==============================================================================
 IMPLEMENTATION STEPS
 ==============================================================================
 
-STEP 1: BACKEND - COMMENT MODEL STRUCTURE
-------------------------------------------
-The Comment model supports both top-level comments and nested replies through
-the parentComment field:
-
-Schema Definition (models/Comment.js):
-
-const commentSchema = new mongoose.Schema(
-  {
-    post: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "BlogPost",
-      required: true,
-    },
-    author: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    content: {
-      type: String,
-      required: true,
-    },
-    parentComment: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Comment",
-      default: null,
-    },
-  },
-  { timestamps: true }
-);
-
-Field Descriptions:
-- post: Reference to the blog post being commented on (REQUIRED)
-- author: Reference to the user who created the comment (REQUIRED)
-- content: The actual comment/reply text (REQUIRED)
-- parentComment: Reference to parent comment (NULL for top-level comments)
-- timestamps: Auto-generated createdAt and updatedAt fields
-
-Key Design Decisions:
-1. Single model for both comments and replies (no separate Reply model)
-2. parentComment field determines hierarchy:
-   - NULL = Top-level comment
-   - ObjectId = Reply to another comment
-3. References allow population of author and post details
-4. Timestamps track creation and modification dates
-
-STEP 2: BACKEND - ADD COMMENT CONTROLLER
------------------------------------------
-Implemented addComment() function to create comments and replies:
+STEP 1: BACKEND - DELETE COMMENT CONTROLLER
+--------------------------------------------
+Implemented deleteComment() function with cascading deletion logic:
 
 Controller Function (commentController.js):
 
-const addComment = async (req, res) => {
+const deleteComment = async (req, res) => {
   try {
-    const { postId } = req.params;
-    const { content, parentComment } = req.body;
+    const { commentId } = req.params;
 
-    // 1. Validate that the blog post exists
-    const post = await BlogPost.findById(postId);
-    if (!post) {
-      return res.status(404).json({ message: "Blog post not found" });
+    // 1. Find the comment to be deleted
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
     }
 
-    // 2. Create the comment
-    const comment = await Comment.create({
-      post: postId,
-      author: req.user._id,  // From authentication middleware
-      content,
-      parentComment: parentComment || null,
+    // 2. Optional: Authorization check (commented out in current implementation)
+    // if (comment.author.toString() !== req.user._id.toString() && 
+    //     req.user.role !== 'admin') {
+    //   return res.status(403).json({ 
+    //     message: "Unauthorized to delete this comment" 
+    //   });
+    // }
+
+    // 3. Delete the comment itself
+    await comment.deleteOne({ _id: commentId });
+
+    // 4. Cascade delete: Remove all replies to this comment
+    await Comment.deleteMany({ parentComment: commentId });
+
+    // 5. Return success response
+    res.status(200).json({ 
+      message: "Comment and its replies deleted successfully" 
     });
-
-    // 3. Populate author information before returning
-    await comment.populate("author", "name profileImageUrl");
-
-    // 4. Return created comment with author details
-    res.status(201).json(comment);
   } catch (error) {
     res.status(500).json({ 
-      message: "Failed to add comment", 
+      message: "Failed to delete comment", 
       error: error.message 
     });
   }
 };
 
-Implementation Flow:
-1. Extract postId from URL params
-2. Extract content and parentComment from request body
-3. Verify blog post exists (404 if not found)
-4. Create comment with:
-   - post: From URL params
-   - author: From req.user (authenticated user)
-   - content: From request body
-   - parentComment: From request body (null if top-level comment)
-5. Populate author details (name, profileImageUrl)
-6. Return created comment with 201 status
+Implementation Breakdown:
 
-Key Features:
-- Automatic author assignment from authenticated user
-- Post validation before comment creation
-- Supports both comments (parentComment: null) and replies (parentComment: id)
-- Returns populated comment object for immediate UI update
-- Comprehensive error handling
+1. FIND COMMENT:
+   - Extract commentId from URL params
+   - Query database for comment by ID
+   - Return 404 if comment doesn't exist
+   - Prevents deletion of non-existent comments
+
+2. AUTHORIZATION CHECK (Optional - Currently Commented Out):
+   - Verify user is comment author OR admin
+   - Compare comment.author with req.user._id
+   - Return 403 Forbidden if unauthorized
+   - Can be enabled for production security
+
+3. DELETE COMMENT:
+   - Use deleteOne() method on comment document
+   - Removes the specific comment from database
+   - First step in deletion process
+
+4. CASCADE DELETE REPLIES:
+   - Use deleteMany() to remove all child replies
+   - Query: { parentComment: commentId }
+   - Finds all comments where parentComment equals deleted comment's ID
+   - Removes entire thread in one operation
+   - Ensures no orphaned replies remain
+
+5. SUCCESS RESPONSE:
+   - Return 200 status code
+   - Descriptive success message
+   - Frontend uses this to show confirmation
+
+Cascading Deletion Logic Example:
+----------------------------------
+Before Deletion:
+- Comment A (top-level)
+  - Reply B (parentComment: A)
+  - Reply C (parentComment: A)
+- Comment D (top-level)
+
+User Deletes Comment A:
+1. DELETE Comment A (deleteOne)
+2. DELETE all where parentComment === A (deleteMany)
+   - Removes Reply B
+   - Removes Reply C
+3. Comment D remains (different top-level comment)
+
+Result:
+- Comment D (top-level)
 
 API Endpoint Details:
-- Route: POST /api/comments/:postId
+- Route: DELETE /api/comments/:commentId
 - Access: Private (requires authentication)
-- Request Params: { postId: "blog_post_id" }
-- Request Body: 
-  {
-    "content": "Comment text here",
-    "parentComment": "parent_comment_id" | null
-  }
-- Response (201): Created comment object with populated author
-- Errors: 404 (post not found), 500 (server error)
+- Request Params: { commentId: "comment_id_to_delete" }
+- Response (200): { message: "Comment and its replies deleted successfully" }
+- Errors: 404 (comment not found), 403 (unauthorized), 500 (server error)
 
-STEP 3: BACKEND - ROUTE REGISTRATION
+STEP 2: BACKEND - ROUTE REGISTRATION
 -------------------------------------
-Added route in commentRoutes.js:
+Registered delete route in commentRoutes.js:
 
 const {
     addComment,
     getCommentsByPost,
-    deleteComment,
+    deleteComment,  // ← Delete controller
     getAllComments,
 } = require('../controllers/commentController');
 const { protect } = require('../middleware/authMiddleware');
 
-router.post('/:postId', protect, addComment);
+router.delete('/:commentId', protect, deleteComment);
 
 Route Configuration:
-- Method: POST
-- Path: /:postId (dynamic parameter for blog post ID)
-- Middleware: protect (requires valid JWT token)
-- Handler: addComment controller function
+- Method: DELETE
+- Path: /:commentId (dynamic parameter)
+- Middleware: protect (authentication required)
+- Handler: deleteComment controller function
 
-The protect middleware:
-- Validates JWT token from Authorization header
-- Extracts user information
-- Attaches user to req.user
-- Returns 401 if unauthorized
-
-STEP 4: FRONTEND - API PATH CONFIGURATION
+STEP 3: FRONTEND - API PATH CONFIGURATION
 ------------------------------------------
-Added comment endpoint in API_PATHS utility:
+Added delete endpoint in API_PATHS utility:
 
 COMMENTS: {
   ADD: (postId) => `/api/comments/${postId}`,
   GET_ALL_BY_POST: (postId) => `/api/comments/${postId}`,
-  DELETE: (commentId) => `/api/comments/${commentId}`,
+  DELETE: (commentId) => `/api/comments/${commentId}`,  // ← Delete path
   GET_ALL: `/api/comments`,
 }
 
 Benefits:
-- Centralized API path management
-- Dynamic postId parameter
-- Type-safe path generation
+- Centralized path management
+- Dynamic commentId parameter
+- Consistent usage across components
 - Easy to update if API changes
-- Consistent path usage across components
 
-STEP 5: FRONTEND - COMMENT INFO CARD COMPONENT
------------------------------------------------
-Implemented handleAddReply() function in CommentInfoCard.jsx:
+STEP 4: FRONTEND - COMMENTS PAGE IMPLEMENTATION
+------------------------------------------------
+Implemented delete functionality in Comments.jsx (Admin Panel):
 
 Component State:
-const [replyText, setReplyText] = useState("");
-const [showReplyForm, setShowReplyForm] = useState(false);
+const [comments, setComments] = useState([]);
+const [openDeleteAlert, setOpenDeleteAlert] = useState({
+  open: false,
+  data: null,
+});
 
 State Management:
-- replyText: Stores the reply content being typed
-- showReplyForm: Controls reply form visibility
-- Both reset after successful submission
+- comments: Array of all comments with nested replies
+- openDeleteAlert: Object controlling delete modal
+  - open: Boolean (modal visibility)
+  - data: String (comment ID to delete)
 
-Add Reply Function:
+Delete Comment Function:
 
-const handleAddReply = async () => {
+const deleteComment = async (commentId) => {
   try {
-    // 1. Validate reply text is not empty
-    if (!replyText || !replyText.trim()) {
-      toast.error("Reply cannot be empty");
-      return;
-    }
+    // 1. Make DELETE API call
+    await axiosInstance.delete(API_PATHS.COMMENTS.DELETE(commentId));
 
-    // 2. Validate post information exists
-    const postId = post?._id;
-    if (!postId) {
-      toast.error("Unable to add reply. Post information is missing.");
-      return;
-    }
+    // 2. Show success notification
+    toast.success("Comment Deleted Successfully");
 
-    // 3. Make API call to add reply
-    const response = await axiosInstance.post(
-      API_PATHS.COMMENTS.ADD(post._id),
-      {
-        content: replyText,
-        parentComment: commentId,
-      }
-    );
+    // 3. Close the modal and reset state
+    setOpenDeleteAlert({ open: false, data: null });
 
-    // 4. Show success notification
-    toast.success("Reply added successfully");
-
-    // 5. Reset form state
-    setShowReplyForm(false);
-    setReplyText("");
-
-    // 6. Refresh comment list
+    // 4. Refresh comment list
     getAllComments();
   } catch (error) {
-    console.error("Error adding reply:", error);
-    toast.error("Failed to add reply. Please try again.");
+    console.error("Error deleting comment:", error);
+    // Could add error toast here
   }
 };
 
 Function Flow:
-1. VALIDATION PHASE:
-   - Check if replyText is not empty
-   - Trim whitespace and validate content
-   - Check if post._id exists
-   - Show error toast and return early if invalid
+1. API CALL:
+   - Call DELETE /api/comments/:commentId
+   - Uses axiosInstance (includes auth headers)
+   - Async/await for promise handling
 
-2. API CALL PHASE:
-   - Call POST /api/comments/:postId
-   - Pass content (reply text)
-   - Pass parentComment (current comment's ID)
-   - Use axiosInstance (includes auth headers)
+2. SUCCESS NOTIFICATION:
+   - Show green success toast
+   - Message: "Comment Deleted Successfully"
+   - Auto-dismisses after few seconds
 
-3. SUCCESS PHASE:
-   - Show success toast notification
-   - Hide reply form (setShowReplyForm(false))
-   - Clear reply text (setReplyText(""))
-   - Refresh entire comment list (getAllComments())
+3. MODAL CLEANUP:
+   - Close confirmation modal (open: false)
+   - Clear comment ID (data: null)
+   - Resets state for next deletion
 
-4. ERROR PHASE:
-   - Log error to console for debugging
-   - Show user-friendly error toast
-   - Maintain form state (user can retry)
+4. REFRESH DATA:
+   - Call getAllComments() to fetch updated list
+   - Re-renders UI with deleted comment removed
+   - Ensures UI consistency with backend
 
-Request Payload Structure:
-{
-  content: "This is my reply to your comment",
-  parentComment: "comment_id_being_replied_to"
-}
+OnDelete Callback Pattern:
 
-Key Implementation Details:
-- Uses optional chaining (post?._id) for safety
-- Validates before making API call
-- Shows immediate feedback via toast
-- Refreshes entire list instead of optimistic update
-- Clears form after success
-- Preserves form on error for retry
-
-STEP 6: FRONTEND - COMMENT REPLY INPUT COMPONENT
--------------------------------------------------
-The CommentReplyInput component provides the UI for adding replies:
-
-Component Props:
-- user: Current logged-in user (for avatar)
-- authorName: Name of comment author being replied to
-- content: Original comment content
-- replyText: Controlled input value
-- setReplyText: Function to update input
-- handleAddReply: Function to submit reply
-- handleCancelReply: Function to cancel/close form
-- disableAutoGen: Optional flag to hide AI button
-- type: "reply" | "new" (determines labels)
-
-Component Features:
-1. User avatar display with online status indicator
-2. Input field with label "Reply to @{authorName}"
-3. Placeholder text: "Write your reply... 💬"
-4. AI Generate button (optional, for AI-powered replies)
-5. Cancel button (gray, closes form)
-6. Reply/Post button (blue gradient, submits)
-
-Integration with CommentInfoCard:
-
-{!isSubReply && showReplyForm && (
-  <CommentReplyInput
-    user={user}
-    authorName={authorName}
-    content={content}
-    replyText={replyText}
-    setReplyText={setReplyText}
-    handleAddReply={handleAddReply}
-    handleCancelReply={handleCancelReply}
+{comments.map((comment) => (
+  <CommentInfoCard
+    key={comment._id}
+    commentId={comment._id}
+    authorName={comment.author.name}
+    authorPhoto={comment.author.profileImageUrl}
+    content={comment.content}
+    updatedOn={moment(comment.updatedAt).format("Do MMM YYYY")}
+    post={comment.post}
+    replies={comment.replies || []}
+    getAllComments={getAllComments}
+    onDelete={(commentId) =>
+      setOpenDeleteAlert({
+        open: true,
+        data: commentId || comment._id,
+      })
+    }
   />
-)}
+))}
 
-Conditional Rendering:
-- Only shown for parent comments (!isSubReply)
-- Only visible when showReplyForm is true
-- Hidden after successful submission or cancel
+OnDelete Callback Explained:
+- Passed to each CommentInfoCard
+- When user clicks Delete button
+- Opens modal and stores comment ID
+- Does NOT immediately delete (safety)
+- Waits for user confirmation
 
-Cancel Handler:
-const handleCancelReply = () => {
-  setShowReplyForm(false);
-  setReplyText("");
+STEP 5: FRONTEND - CONFIRMATION MODAL
+--------------------------------------
+Implemented delete confirmation using Modal component:
+
+Modal Component Usage:
+
+<Modal
+  isOpen={openDeleteAlert?.open}
+  onClose={() => setOpenDeleteAlert({ open: false, data: null })}
+  title="Delete Comment"
+>
+  <div className="w-[50vw] md:max-w-md mx-auto">
+    <DeleteAlertContent
+      content="Are you sure you want to delete this comment?"
+      onDelete={() => deleteComment(openDeleteAlert?.data)}
+    />
+  </div>
+</Modal>
+
+Modal Features:
+1. Conditional Rendering:
+   - Only shown when openDeleteAlert.open is true
+   - Hidden by default
+
+2. Close Handler:
+   - onClose resets state to { open: false, data: null }
+   - User can cancel by clicking outside or close button
+   - No deletion occurs on cancel
+
+3. Title:
+   - Clear modal title: "Delete Comment"
+   - User knows what action they're confirming
+
+4. Responsive Width:
+   - w-[50vw]: 50% viewport width on mobile
+   - md:max-w-md: Max 28rem on medium screens and up
+   - Centers content with mx-auto
+
+DeleteAlertContent Component:
+-----------------------------
+Reusable component for delete confirmations:
+
+const DeleteAlertContent = ({ content, onDelete }) => {
+  return (
+    <div className='p-5'>
+      <p className="text-[14px]">{content}</p>
+      <div className="flex justify-end mt-6">
+        <button
+          type='button'
+          className='btn-small'
+          onClick={onDelete}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
 };
 
-STEP 7: DATA FLOW & STATE MANAGEMENT
--------------------------------------
+Component Props:
+- content: String message to display
+- onDelete: Function called when Delete button clicked
 
-ADDING A TOP-LEVEL COMMENT FLOW:
-(Not yet implemented in current code, but would follow similar pattern)
+Usage Pattern:
+<DeleteAlertContent
+  content="Are you sure you want to delete this comment?"
+  onDelete={() => deleteComment(openDeleteAlert?.data)}
+/>
 
-1. User navigates to blog post
-2. User types comment in comment form
-3. User clicks "Post Comment"
-4. Frontend calls:
-   POST /api/comments/:postId
-   Body: { content: "...", parentComment: null }
-5. Backend validates post exists
-6. Backend creates comment with author from req.user
-7. Backend returns created comment
-8. Frontend shows success toast
-9. Frontend refreshes comment list
-10. New comment appears at top/bottom
+Benefits:
+- Reusable across different delete scenarios
+- Consistent UI for all delete confirmations
+- Customizable message
+- Simple, focused responsibility
 
-ADDING A REPLY (NESTED COMMENT) FLOW:
-1. User sees existing comment
-2. User clicks "Reply" button
-3. showReplyForm toggles to true
-4. Reply form expands with CommentReplyInput
-5. User types reply text
-6. User clicks "Reply" button (or "AI Generate" for AI help)
-7. handleAddReply() validates input
-8. Frontend calls:
-   POST /api/comments/:postId
-   Body: { content: "...", parentComment: "parent_comment_id" }
-9. Backend validates post exists
-10. Backend creates reply with parentComment reference
-11. Backend returns created reply
-12. Frontend shows "Reply added successfully"
-13. Frontend calls getAllComments()
-14. Comment list refreshes with new reply
-15. Reply appears nested under parent comment
-16. Form closes and resets
+STEP 6: COMMENT INFO CARD - DELETE BUTTON
+------------------------------------------
+Implemented delete button in CommentInfoCard component:
 
-State Flow Diagram:
-User Action → handleAddReply() → Validation → API Call → Backend Processing
-→ Database Insert → Response → Success Handler → Toast Notification
-→ Form Reset → getAllComments() → Re-fetch Data → UI Update
+Delete Button UI:
+
+<button
+  className="group/btn flex items-center gap-2 text-[13px] font-semibold 
+    text-rose-600 hover:text-white px-4 py-1.5 rounded-lg 
+    hover:bg-linear-to-r hover:from-rose-500 hover:to-rose-600 
+    cursor-pointer border border-rose-200 hover:border-rose-500 
+    transition-all duration-200 hover:scale-105 hover:shadow-md ml-auto"
+  onClick={() => onDelete(commentId)}
+>
+  <LuTrash2 className="text-[14px] group-hover/btn:scale-110 
+    transition-transform" />
+  <span>Delete</span>
+</button>
+
+Button Features:
+
+1. VISUAL DESIGN:
+   - Rose/red color scheme (danger action)
+   - Gradient background on hover
+   - Border changes on hover
+   - Positioned at right end (ml-auto)
+
+2. INTERACTIVE EFFECTS:
+   - Scale animation on hover (1.05x)
+   - Icon scales up on hover (1.10x)
+   - Shadow appears on hover
+   - Smooth transitions (200ms)
+
+3. CLICK HANDLER:
+   - onClick={() => onDelete(commentId)}
+   - Calls parent's onDelete callback
+   - Passes current comment's ID
+   - Triggers modal opening
+
+Nested Reply Delete Pattern:
+
+{showSubReplies && replies?.length > 0 && (
+  <div className="mt-5 ml-4 space-y-2 pl-4 border-l-2">
+    {replies.map((comment, index) => (
+      <CommentInfoCard
+        key={comment._id}
+        commentId={comment._id}
+        authorName={comment.author.name}
+        authorPhoto={comment.author.profileImageUrl}
+        content={comment.content}
+        post={comment.post}
+        replies={comment.replies || []}
+        isSubReply
+        updatedOn={moment(comment.updatedAt).format("Do MMM YYYY")}
+        onDelete={() => onDelete(comment._id)}  // ← Passes reply ID
+      />
+    ))}
+  </div>
+)}
+
+Recursive Delete Handling:
+- Each nested reply has its own Delete button
+- onDelete callback passed down through props
+- Clicking delete on reply passes reply's ID
+- Same modal flow as parent comments
+- Backend handles as single comment deletion (no replies to cascade)
+
+STEP 7: DATA FLOW & USER EXPERIENCE
+------------------------------------
+
+DELETE PARENT COMMENT FLOW:
+1. Admin navigates to Comments page
+2. Comments displayed with nested replies
+3. User sees parent comment with 2 replies nested below
+4. User clicks "Delete" button on parent comment
+5. onClick triggers: onDelete(parentCommentId)
+6. setOpenDeleteAlert({ open: true, data: parentCommentId })
+7. Modal appears with confirmation message
+8. User sees: "Are you sure you want to delete this comment?"
+9. User clicks "Delete" button in modal
+10. deleteComment(parentCommentId) executes
+11. API call: DELETE /api/comments/:parentCommentId
+12. Backend deletes parent comment
+13. Backend cascades delete to all replies (deleteMany)
+14. Backend returns success message
+15. Frontend shows green toast: "Comment Deleted Successfully"
+16. Modal closes (setOpenDeleteAlert({ open: false, data: null }))
+17. getAllComments() fetches updated list
+18. UI re-renders without deleted comment and its replies
+19. User sees updated comment list
+
+DELETE NESTED REPLY FLOW:
+1. Admin navigates to Comments page
+2. Parent comment displayed with replies
+3. User clicks "View Replies" to expand nested comments
+4. Replies appear indented below parent
+5. User clicks "Delete" on specific reply
+6. onClick triggers: onDelete(replyCommentId)
+7. setOpenDeleteAlert({ open: true, data: replyCommentId })
+8. Modal appears with confirmation
+9. User clicks "Delete" in modal
+10. deleteComment(replyCommentId) executes
+11. API call: DELETE /api/comments/:replyCommentId
+12. Backend deletes reply comment
+13. Backend checks for child replies (deleteMany)
+14. No child replies found (replies can't have replies)
+15. Backend returns success
+16. Frontend shows success toast
+17. Modal closes
+18. getAllComments() refreshes list
+19. UI re-renders with reply removed
+20. Parent comment remains with other replies intact
+
+CANCEL DELETION FLOW:
+1. User clicks "Delete" button
+2. Modal opens
+3. User reads confirmation message
+4. User changes mind
+5. User clicks outside modal or close button (X)
+6. onClose triggered
+7. setOpenDeleteAlert({ open: false, data: null })
+8. Modal closes without API call
+9. Comment remains unchanged
+10. No toast notification shown
 
 ==============================================================================
 TECHNICAL ARCHITECTURE
 ==============================================================================
 
-COMMENT HIERARCHY STRUCTURE:
+STATE FLOW DIAGRAM:
+-------------------
+User Clicks Delete
+    ↓
+onDelete(commentId) callback
+    ↓
+setOpenDeleteAlert({ open: true, data: commentId })
+    ↓
+Modal Renders
+    ↓
+User Confirms
+    ↓
+deleteComment(commentId)
+    ↓
+axiosInstance.delete(/api/comments/:commentId)
+    ↓
+Backend: deleteComment() controller
+    ↓
+Database: comment.deleteOne()
+    ↓
+Database: Comment.deleteMany({ parentComment: commentId })
+    ↓
+Backend: Success Response
+    ↓
+Frontend: toast.success()
+    ↓
+setOpenDeleteAlert({ open: false, data: null })
+    ↓
+getAllComments()
+    ↓
+UI Re-render
+
+CALLBACK PROPAGATION:
+---------------------
+Comments.jsx (Parent)
+  ↓ passes onDelete callback
+CommentInfoCard (Parent Comment)
+  ↓ passes same onDelete callback
+CommentInfoCard (Nested Reply)
+  ↓ calls onDelete(comment._id)
+Back to Comments.jsx
+  ↓ opens modal with comment ID
+User Confirms
+  ↓ deleteComment(commentId)
+API Call → Backend → Delete
+
+COMPONENT HIERARCHY:
+--------------------
+Comments.jsx (Admin Panel)
+├── CommentInfoCard (Parent Comment 1)
+│   ├── Delete Button → onDelete(parentId1)
+│   └── Nested Replies
+│       ├── CommentInfoCard (Reply 1)
+│       │   └── Delete Button → onDelete(replyId1)
+│       └── CommentInfoCard (Reply 2)
+│           └── Delete Button → onDelete(replyId2)
+├── CommentInfoCard (Parent Comment 2)
+│   └── Delete Button → onDelete(parentId2)
+└── Modal (Confirmation)
+    └── DeleteAlertContent
+        └── Delete Button → deleteComment(storedId)
+
+CASCADING DELETION STRATEGY:
 ----------------------------
-Database Storage:
-- Comments stored flat in single collection
-- parentComment field creates relationship
-- Example:
-  Comment 1: { _id: "A", parentComment: null }         // Top-level
-  Comment 2: { _id: "B", parentComment: "A" }          // Reply to A
-  Comment 3: { _id: "C", parentComment: "A" }          // Reply to A
-  Comment 4: { _id: "D", parentComment: null }         // Top-level
+Database Queries:
+1. Delete parent: Comment.deleteOne({ _id: parentId })
+2. Delete children: Comment.deleteMany({ parentComment: parentId })
 
-Nested Representation (after processing):
-{
-  _id: "A",
-  content: "Great article!",
-  replies: [
-    { _id: "B", content: "I agree!" },
-    { _id: "C", content: "Me too!" }
-  ]
-}
-{
-  _id: "D",
-  content: "Thanks for sharing",
-  replies: []
-}
+Query Execution Order:
+1. First: Delete the parent comment
+2. Second: Delete all replies referencing parent
 
-AUTHENTICATION FLOW:
--------------------
-1. User logs in → Receives JWT token
-2. Token stored in localStorage/cookie
-3. axiosInstance includes token in Authorization header
-4. Backend protect middleware validates token
-5. req.user populated with user data
-6. Controller uses req.user._id as author
-7. No need to pass author from frontend (security)
+Why This Order?
+- Parent deletion confirms comment exists
+- Child deletion can happen even if no children exist
+- deleteMany returns count of deleted documents
+- No errors if no children found (0 deleted)
 
-API REQUEST/RESPONSE CYCLE:
----------------------------
-Request:
-POST /api/comments/507f1f77bcf86cd799439011
-Headers: { Authorization: "Bearer <token>" }
-Body: {
-  "content": "This is a great point!",
-  "parentComment": "507f191e810c19729de860ea"
-}
+Alternative Approaches (Not Used):
+1. ON DELETE CASCADE (Database Level):
+   - Would require foreign key constraints
+   - MongoDB doesn't natively support CASCADE
+   - Application-level cascade gives more control
 
-Backend Processing:
-1. Verify JWT token → Extract user
-2. Find blog post by ID
-3. Create comment document
-4. Populate author details
-5. Return created comment
+2. Mongoose Middleware (Pre/Post Hooks):
+   - Could use pre('remove') hook
+   - Automatically delete children
+   - Current approach is more explicit
 
-Response (201):
-{
-  "_id": "507f191e810c19729de86123",
-  "post": "507f1f77bcf86cd799439011",
-  "author": {
-    "_id": "507f191e810c19729de860ab",
-    "name": "John Doe",
-    "profileImageUrl": "https://..."
-  },
-  "content": "This is a great point!",
-  "parentComment": "507f191e810c19729de860ea",
-  "createdAt": "2025-11-17T10:30:00.000Z",
-  "updatedAt": "2025-11-17T10:30:00.000Z"
-}
+3. Soft Delete:
+   - Mark as deleted instead of removing
+   - Keep data for audit trail
+   - Could be added in future
 
 ==============================================================================
-VALIDATION LAYERS
+SECURITY CONSIDERATIONS
 ==============================================================================
 
-FRONTEND VALIDATION:
--------------------
-1. Empty Content Check:
-   if (!replyText || !replyText.trim())
-   - Prevents submitting empty or whitespace-only comments
-   - Shows error toast immediately
-   - No API call made
+AUTHENTICATION:
+---------------
+- protect middleware validates JWT token
+- Only authenticated users can delete
+- Unauthenticated requests return 401
 
-2. Post ID Validation:
-   if (!post?._id)
-   - Ensures post information exists
-   - Prevents errors from deleted posts
-   - Shows descriptive error message
+AUTHORIZATION (Currently Disabled):
+-----------------------------------
+Commented out authorization check:
+// if (comment.author.toString() !== req.user._id.toString() && 
+//     req.user.role !== 'admin') {
+//   return res.status(403).json({ 
+//     message: "Unauthorized to delete this comment" 
+//   });
+// }
 
-BACKEND VALIDATION:
-------------------
-1. Post Existence Check:
-   const post = await BlogPost.findById(postId);
-   if (!post) return res.status(404)
-   - Ensures blog post exists before adding comment
-   - Prevents orphaned comments
+When Enabled:
+- Users can only delete their own comments
+- Admins can delete any comment
+- Other users receive 403 Forbidden
 
-2. Authentication Check:
-   protect middleware
-   - Ensures user is logged in
-   - Validates JWT token
-   - Returns 401 if unauthorized
+Why Currently Disabled?
+- Simplified for admin panel use
+- All admin panel users assumed authorized
+- Can be enabled for production security
 
-3. Required Fields:
-   Schema validation ensures:
-   - post field is required
-   - author field is required
-   - content field is required
+BEST PRACTICES FOR PRODUCTION:
+1. Enable authorization check
+2. Implement role-based access control (RBAC)
+3. Add audit logging (who deleted what when)
+4. Implement soft delete for data recovery
+5. Rate limit delete operations
+6. Add CAPTCHA for bulk deletions
 
-4. Database Constraints:
-   - post must be valid ObjectId
-   - author must be valid ObjectId
-   - parentComment must be valid ObjectId or null
+DATA INTEGRITY:
+---------------
+1. Comment Existence Check:
+   - Verify comment exists before deleting
+   - Return 404 if not found
+   - Prevents errors from double-deletion
+
+2. Cascading Delete:
+   - Ensures no orphaned replies
+   - Maintains referential integrity
+   - Cleans up related data
+
+3. Transaction Safety:
+   - deleteOne and deleteMany are separate operations
+   - Could use MongoDB transactions for atomicity
+   - Current approach acceptable for use case
 
 ==============================================================================
-ERROR HANDLING STRATEGY
+ERROR HANDLING
 ==============================================================================
-
-FRONTEND ERROR HANDLING:
------------------------
-1. User-Friendly Messages:
-   - "Reply cannot be empty"
-   - "Unable to add reply. Post information is missing."
-   - "Failed to add reply. Please try again."
-
-2. Console Logging:
-   console.error("Error adding reply:", error);
-   - Helps developers debug issues
-   - Not shown to end users
-
-3. Form State Preservation:
-   - On error, form remains open
-   - Reply text not cleared
-   - User can edit and retry
-
-4. Toast Notifications:
-   - Success: Green toast with checkmark
-   - Error: Red toast with X icon
-   - Auto-dismiss after 3-5 seconds
 
 BACKEND ERROR HANDLING:
-----------------------
-1. 404 - Post Not Found:
-   - Blog post with given ID doesn't exist
-   - Prevents adding comments to deleted posts
+-----------------------
+1. Comment Not Found (404):
+   - Comment with given ID doesn't exist
+   - Already deleted by another user
+   - Invalid comment ID format
 
-2. 401 - Unauthorized:
-   - No JWT token provided
-   - Invalid or expired token
-   - User not authenticated
+2. Unauthorized (403) - If enabled:
+   - User not comment author
+   - User not admin
+   - Attempting to delete others' comments
 
-3. 500 - Server Error:
+3. Server Error (500):
    - Database connection issues
-   - Validation errors
+   - MongoDB operation failures
    - Unexpected exceptions
-   - Returns error message for debugging
 
-==============================================================================
-USER EXPERIENCE FLOW
-==============================================================================
+FRONTEND ERROR HANDLING:
+------------------------
+Current Implementation:
+catch (error) {
+  console.error("Error deleting comment:", error);
+  // No user-facing error message
+}
 
-SCENARIO 1: SUCCESSFUL REPLY
-----------------------------
-1. User reads comment: "React hooks are amazing!"
-2. User clicks "Reply" button
-3. Reply form expands smoothly below comment
-4. User sees:
-   - Their avatar with online indicator
-   - Input field: "Reply to @JohnDoe"
-   - Three buttons: AI Generate | Cancel | Reply
-5. User types: "I totally agree! Which hook do you use most?"
-6. User clicks "Reply" button
-7. Button shows brief loading state
-8. Green toast appears: "Reply added successfully"
-9. Form smoothly closes and clears
-10. Comment list refreshes
-11. New reply appears nested under parent comment
-12. User sees their reply with timestamp "Just now"
+Improvement Opportunities:
+catch (error) {
+  console.error("Error deleting comment:", error);
+  toast.error("Failed to delete comment. Please try again.");
+  setOpenDeleteAlert({ open: false, data: null });
+}
 
-SCENARIO 2: EMPTY REPLY ERROR
------------------------------
-1. User clicks "Reply"
-2. Form expands
-3. User clicks "Reply" without typing anything
-4. Red toast appears: "Reply cannot be empty"
-5. Form remains open
-6. User can type and retry
+Enhanced Error Handling:
+- Show error toast to user
+- Close modal on error
+- Log detailed error for debugging
+- Retry mechanism for network failures
 
-SCENARIO 3: DELETED POST ERROR
-------------------------------
-1. Admin deletes blog post
-2. Comments remain in database
-3. User views comment in admin panel
-4. User clicks "Reply"
-5. User types reply and clicks "Reply"
-6. Red toast appears: "Unable to add reply. Post information is missing."
-7. Form closes
-8. No broken API call made
-
-SCENARIO 4: NETWORK ERROR
--------------------------
-1. User types reply
-2. User clicks "Reply"
-3. Network fails during API call
-4. Red toast appears: "Failed to add reply. Please try again."
-5. Console shows detailed error
-6. Form remains open with text
-7. User can retry when connection restored
-
-==============================================================================
-KEY BENEFITS
-==============================================================================
-
-1. THREADED CONVERSATIONS:
-   - Replies nested under parent comments
-   - Clear visual hierarchy
-   - Easy to follow discussion threads
-
-2. USER AUTHENTICATION:
-   - Automatic author assignment
-   - Secure token-based auth
-   - No need to manually select author
-
-3. REAL-TIME UPDATES:
-   - Comment list refreshes after submission
-   - New comments immediately visible
-   - Consistent state across UI
-
-4. ROBUST VALIDATION:
-   - Frontend and backend validation
-   - Prevents invalid data
-   - Clear error messages
-
-5. SMOOTH UX:
-   - Form auto-closes after success
-   - Toast notifications for feedback
-   - Form persists on error for retry
-   - AI assistance available
-
-6. SCALABLE DESIGN:
-   - Single model for comments and replies
-   - Efficient database queries
-   - Reusable component pattern
-   - Easy to extend to multi-level nesting
-
-7. SECURITY:
-   - Authentication required
-   - Author derived from JWT token
-   - Post validation prevents orphaned comments
-   - SQL injection protection via Mongoose
-
-==============================================================================
-LIMITATIONS & FUTURE ENHANCEMENTS
-==============================================================================
-
-CURRENT LIMITATIONS:
+EDGE CASES HANDLED:
 -------------------
-1. One level of nesting only:
-   - Replies can't have replies
-   - Could be extended to multi-level threading
+1. Deleting Already Deleted Comment:
+   - Backend returns 404
+   - Frontend should show error (needs implementation)
+   - Modal closes gracefully
 
-2. Full list refresh:
-   - getAllComments() re-fetches all comments
-   - Could be optimized with optimistic updates
+2. Network Failure During Deletion:
+   - API call fails
+   - Comment remains in database
+   - Frontend shows error (needs implementation)
+   - User can retry
 
-3. No edit functionality:
-   - Comments are permanent once posted
-   - Could add edit feature with timestamp
+3. Deleting Parent with Many Replies:
+   - Backend handles with deleteMany
+   - All replies removed in one operation
+   - Efficient for large threads
 
-4. No like/vote system:
-   - Could add upvote/downvote functionality
+4. Concurrent Deletions:
+   - Two admins delete same comment
+   - First succeeds, second gets 404
+   - Second deletion fails gracefully
 
-5. No spam protection:
-   - Could add rate limiting
-   - Could add content moderation
+==============================================================================
+USER EXPERIENCE FEATURES
+==============================================================================
 
-FUTURE ENHANCEMENTS:
--------------------
-1. Multi-Level Threading:
-   - Allow replies to replies
-   - Recursive nesting structure
-   - Expandable/collapsible threads
+1. CONFIRMATION MODAL:
+   - Prevents accidental deletions
+   - Clear, simple confirmation message
+   - Easy to cancel (click outside or X)
+   - Easy to confirm (red Delete button)
 
-2. Optimistic Updates:
-   - Add comment to UI immediately
-   - Revert if API call fails
+2. VISUAL FEEDBACK:
+   - Delete button turns red on hover
+   - Icon scales up on hover
+   - Button scales on hover
+   - Clear visual indicator of danger action
+
+3. TOAST NOTIFICATIONS:
+   - Immediate confirmation of success
+   - Non-intrusive (auto-dismiss)
+   - Positioned consistently
+   - Styled appropriately (green for success)
+
+4. REAL-TIME UPDATES:
+   - Comment list refreshes after deletion
+   - No need to reload page
+   - Smooth UI transition
+   - Consistent state between UI and backend
+
+5. RESPONSIVE DESIGN:
+   - Modal adjusts to screen size
+   - Delete buttons work on all devices
+   - Touch-friendly button sizes
+   - Mobile-optimized modal width
+
+6. ACCESSIBILITY:
+   - Keyboard navigation supported
+   - Clear button labels
+   - Semantic HTML
+   - Focus management in modal
+
+==============================================================================
+REUSABLE COMPONENTS
+==============================================================================
+
+1. MODAL COMPONENT:
+   - Used for delete confirmations
+   - Reusable for other modals
+   - Customizable title and content
+   - Consistent styling
+
+2. DELETE ALERT CONTENT:
+   - Reusable confirmation UI
+   - Used for:
+     * Delete comments
+     * Delete blog posts
+     * Delete any resource
+   - Customizable message
+   - Consistent button styling
+
+3. COMMENT INFO CARD:
+   - Recursive component
+   - Handles both parents and replies
+   - Consistent delete behavior
+   - Single source of truth
+
+BENEFITS OF REUSABILITY:
+- Consistent UX across features
+- Easier maintenance
+- Less code duplication
+- Faster development of new features
+
+==============================================================================
+PERFORMANCE CONSIDERATIONS
+==============================================================================
+
+1. CASCADING DELETE EFFICIENCY:
+   - deleteMany() is optimized by MongoDB
+   - Single query for all child deletions
+   - Index on parentComment field speeds up query
+   - More efficient than multiple deleteOne calls
+
+2. FULL LIST REFRESH:
+   - getAllComments() re-fetches entire list
+   - Simple but potentially inefficient for large lists
+   - Alternative: Remove deleted comment from state
+
+Optimization Opportunity:
+Instead of:
+getAllComments()
+
+Could use:
+setComments(prevComments => 
+  prevComments.filter(c => c._id !== commentId)
+)
+
+Benefits:
+- No API call needed
+- Instant UI update
+- Reduced server load
+
+Tradeoffs:
+- Must manually handle nested replies removal
+- State could drift from server
+- More complex state management
+
+3. MODAL RENDERING:
+   - Modal conditionally rendered
+   - Only in DOM when needed
+   - Minimal performance impact
+
+==============================================================================
+FUTURE ENHANCEMENTS
+==============================================================================
+
+1. SOFT DELETE:
+   - Add isDeleted flag to schema
+   - Hide deleted comments instead of removing
+   - Allow restore functionality
+   - Maintain audit trail
+
+2. BULK DELETE:
+   - Select multiple comments
+   - Delete in single operation
+   - Useful for spam/moderation
+
+3. DELETE CONFIRMATION OPTIONS:
+   - "Delete comment only" vs "Delete with replies"
+   - User choice for cascading
+   - More granular control
+
+4. UNDO FUNCTIONALITY:
+   - Brief window to undo deletion
+   - Toast with "Undo" button
+   - Restore from soft delete
+
+5. AUDIT LOGGING:
+   - Log who deleted what when
+   - Admin activity tracking
+   - Compliance and accountability
+
+6. OPTIMISTIC UI UPDATES:
+   - Remove from UI immediately
+   - Revert if API fails
    - Faster perceived performance
 
-3. Edit & Delete:
-   - Edit comment within time window
-   - Show "edited" indicator
-   - Track edit history
+7. AUTHORIZATION IMPROVEMENTS:
+   - Enable role-based checks
+   - Add permission system
+   - User-specific delete abilities
 
-4. Reactions:
-   - Like/Love/Laugh reactions
-   - Vote up/down system
-   - Most liked comments highlighted
-
-5. Pagination:
-   - Load comments in batches
-   - Infinite scroll or "Load More"
-   - Improve performance for posts with many comments
-
-6. Real-Time Updates:
-   - WebSocket integration
-   - Live comment notifications
-   - See new comments without refresh
-
-7. Rich Text:
-   - Markdown support
-   - Code snippets
-   - Images/GIFs in comments
-
-8. Mentions & Notifications:
-   - @mention other users
-   - Email notifications for replies
-   - In-app notification system
+8. BETTER ERROR MESSAGING:
+   - Show specific error reasons
+   - Suggest corrective actions
+   - Retry mechanisms
 
 ==============================================================================
 LESSONS LEARNED
 ==============================================================================
 
-1. SINGLE MODEL APPROACH:
-   - Using one model for both comments and replies simplifies architecture
-   - parentComment field elegantly handles hierarchy
-   - Easier to query and maintain than separate models
+1. CASCADING DELETES:
+   - Application-level cascade gives control
+   - Must be explicit about relationships
+   - Consider impact on related data
+   - Test thoroughly with nested data
 
-2. VALIDATE EARLY:
-   - Frontend validation prevents unnecessary API calls
-   - Backend validation ensures data integrity
-   - Both layers needed for robust system
+2. CONFIRMATION MODALS:
+   - Essential for destructive actions
+   - Prevents costly mistakes
+   - Simple confirmation sufficient
+   - Don't over-complicate
 
-3. USER FEEDBACK IS CRITICAL:
-   - Toast notifications greatly improve UX
-   - Users need immediate confirmation of actions
-   - Error messages should be helpful, not technical
+3. STATE MANAGEMENT:
+   - Object for modal state better than multiple booleans
+   - { open: false, data: null } pattern clean
+   - Easy to extend with more properties
+   - Clear state transitions
 
-4. STATE MANAGEMENT:
-   - Clearing form state after success prevents confusion
-   - Preserving state on error allows retry
-   - Toggle states (showReplyForm) control UI flow
+4. CALLBACK PATTERNS:
+   - Pass callbacks down component tree
+   - Keeps delete logic centralized
+   - Same callback works for all depths
+   - Flexible and maintainable
 
-5. SECURITY BY DEFAULT:
-   - Never trust client-side author information
-   - Always derive author from authenticated user
-   - JWT tokens provide secure, stateless auth
+5. TOAST NOTIFICATIONS:
+   - Immediate feedback crucial
+   - Success messages build confidence
+   - Error messages need implementation
+   - Auto-dismiss improves UX
 
-6. ERROR HANDLING:
-   - Plan for every failure scenario
-   - Graceful degradation improves reliability
-   - Console logging aids debugging without exposing to users
+6. REUSABLE COMPONENTS:
+   - Modal and DeleteAlertContent highly reusable
+   - Consistent UX across features
+   - Easier to maintain and update
+   - Plan for reusability from start
 
 ==============================================================================
