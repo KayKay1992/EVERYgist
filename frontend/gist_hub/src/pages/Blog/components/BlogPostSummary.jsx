@@ -18,11 +18,11 @@ const BlogPostSummary = ({
       onClick={onClick}
     >
       {/* Decorative gradient overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-50/0 via-pink-50/0 to-purple-50/0 group-hover:from-purple-50/30 group-hover:via-pink-50/20 group-hover:to-purple-50/30 transition-all duration-500 pointer-events-none z-0"></div>
+      <div className="absolute inset-0 bg-linear-to-br from-purple-50/0 via-pink-50/0 to-purple-50/0 group-hover:from-purple-50/30 group-hover:via-pink-50/20 group-hover:to-purple-50/30 transition-all duration-500 pointer-events-none z-0"></div>
 
       {/* Image Section */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-black/50 via-black/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
         <img
           src={coverImageUrl}
           alt={title}
@@ -50,7 +50,7 @@ const BlogPostSummary = ({
       {/* Content Section */}
       <div className="relative p-5 z-10">
         {/* Title */}
-        <h2 className="text-lg font-bold mb-2 line-clamp-2 text-gray-900 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-purple-700 group-hover:to-pink-700 group-hover:bg-clip-text transition-all duration-300 leading-snug">
+        <h2 className="text-lg font-bold mb-2 line-clamp-2 text-gray-900 group-hover:text-transparent group-hover:bg-linear-to-r group-hover:from-purple-700 group-hover:to-pink-700 group-hover:bg-clip-text transition-all duration-300 leading-snug">
           {title}
         </h2>
 
@@ -64,7 +64,7 @@ const BlogPostSummary = ({
           {tags.slice(0, 3).map((tag, index) => (
             <button
               key={index}
-              className="bg-gradient-to-r from-purple-50 via-pink-50 to-purple-50 text-purple-700 text-xs font-semibold px-2.5 py-1 rounded-full hover:from-purple-100 hover:via-pink-100 hover:to-purple-100 transition-all duration-300 hover:scale-105 border border-purple-200/50 hover:shadow-md"
+              className="bg-linear-to-r from-purple-50 via-pink-50 to-purple-50 text-purple-700 text-xs font-semibold px-2.5 py-1 rounded-full hover:from-purple-100 hover:via-pink-100 hover:to-purple-100 transition-all duration-300 hover:scale-105 border border-purple-200/50 hover:shadow-md"
               onClick={(e) => {
                 e.stopPropagation();
                 navigate(`/tag/${tag}`);
@@ -84,7 +84,7 @@ const BlogPostSummary = ({
         <div className="flex items-center justify-between pt-4 border-t border-gray-100 group-hover:border-purple-100 transition-colors duration-300">
           <div className="flex items-center gap-2.5">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full blur opacity-0 group-hover:opacity-75 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-linear-to-r from-purple-400 to-pink-400 rounded-full blur opacity-0 group-hover:opacity-75 transition-opacity duration-300"></div>
               <img
                 src={authorProfileImg}
                 alt={authorName}
@@ -117,7 +117,7 @@ const BlogPostSummary = ({
           </div>
 
           {/* Arrow indicator */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center group-hover:from-purple-600 group-hover:to-pink-600 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-purple-500/50">
+          <div className="w-8 h-8 rounded-full bg-linear-to-r from-purple-100 to-pink-100 flex items-center justify-center group-hover:from-purple-600 group-hover:to-pink-600 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-purple-500/50">
             <svg
               className="w-4 h-4 text-purple-600 group-hover:text-white transition-colors duration-300 group-hover:translate-x-0.5"
               fill="none"

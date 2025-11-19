@@ -8,6 +8,7 @@ import moment from "moment";
 import { LuLoaderCircle, LuGalleryVerticalEnd } from "react-icons/lu";
 import FeaturedBlogPost from "./components/FeaturedBlogPost";
 import BlogPostSummary from "./components/BlogPostSummary";
+import TrendingPostsSection from "./components/TrendingPostsSection";
 
 const BlogLandingPage = () => {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ const BlogLandingPage = () => {
   return (
     <BlogLayout>
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        <div className="col-span-1 md:col-span-9">
+        <div className="col-span-12 md:col-span-9">
           {/* Featured Blog Post */}
           {blogPostList.length > 0 && (
             <div className="mb-8">
@@ -126,7 +127,10 @@ const BlogLandingPage = () => {
           )}
         </div>
 
-      
+        {/* Sidebar Section Trending Posts */}
+        <div className="col-span-12 md:col-span-3">
+         <TrendingPostsSection />
+        </div>
       </div>
     </BlogLayout>
   );
