@@ -29,13 +29,6 @@ const blogPostSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    author: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-    ],
     isDraft: {
       type: Boolean,
       default: false,
