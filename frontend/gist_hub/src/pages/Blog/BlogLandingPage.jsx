@@ -57,7 +57,7 @@ const BlogLandingPage = () => {
     navigate(`/${post.slug}`);
   };
   return (
-    <BlogLayout>
+    <BlogLayout activeMenu="01">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="col-span-12 md:col-span-9">
           {/* Featured Blog Post */}
@@ -68,7 +68,11 @@ const BlogLandingPage = () => {
                 description={blogPostList[0].content}
                 coverImageUrl={blogPostList[0].coverImageUrl}
                 tags={blogPostList[0].tags}
-                updatedOn={blogPostList[0].updatedAt ? moment(blogPostList[0].updatedAt).format("MMM D, YYYY") : "-"}
+                updatedOn={
+                  blogPostList[0].updatedAt
+                    ? moment(blogPostList[0].updatedAt).format("MMM D, YYYY")
+                    : "-"
+                }
                 authorName={blogPostList[0].author.name}
                 authorProfileImg={blogPostList[0].author.profileImageUrl}
                 onClick={() => handleClickPost(blogPostList[0])}
@@ -78,20 +82,27 @@ const BlogLandingPage = () => {
 
           {/* Other Blog Posts Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {blogPostList.length > 0 && blogPostList.slice(1).map((item) => (
-              <BlogPostSummary
-                key={item._id}
-                post={item._id}
-                title={item.title}
-                coverImageUrl={item.coverImageUrl}
-                description={item.content}
-                tags={item.tags}
-                authorName={item.author.name}
-                authorProfileImg={item.author.profileImageUrl}
-                updatedOn={item.updatedAt ? moment(item.updatedAt).format("MMM D, YYYY") : "-"}
-                onClick={() => handleClickPost(item)}
-              />   
-            ))}
+            {blogPostList.length > 0 &&
+              blogPostList
+                .slice(1)
+                .map((item) => (
+                  <BlogPostSummary
+                    key={item._id}
+                    post={item._id}
+                    title={item.title}
+                    coverImageUrl={item.coverImageUrl}
+                    description={item.content}
+                    tags={item.tags}
+                    authorName={item.author.name}
+                    authorProfileImg={item.author.profileImageUrl}
+                    updatedOn={
+                      item.updatedAt
+                        ? moment(item.updatedAt).format("MMM D, YYYY")
+                        : "-"
+                    }
+                    onClick={() => handleClickPost(item)}
+                  />
+                ))}
           </div>
 
           {/* Loading State */}
@@ -129,7 +140,7 @@ const BlogLandingPage = () => {
 
         {/* Sidebar Section Trending Posts */}
         <div className="col-span-12 md:col-span-3">
-         <TrendingPostsSection />
+          <TrendingPostsSection />
         </div>
       </div>
     </BlogLayout>

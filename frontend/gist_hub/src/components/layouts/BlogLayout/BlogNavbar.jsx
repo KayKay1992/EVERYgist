@@ -18,6 +18,8 @@ const BlogNavbar = ({ activeMenu }) => {
   const [openSideMenu, setOpenSideMenu] = useState(false);
   const [openSearchBar, setOpenSearchBar] = useState(false);
 
+  console.log("BlogNavbar activeMenu:", activeMenu); // Debug log
+
   return (
     <>
       <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/60 shadow-sm">
@@ -55,15 +57,27 @@ const BlogNavbar = ({ activeMenu }) => {
           <nav className="hidden md:flex items-center gap-8">
             {BLOG_NAVBAR_DATA.map((item, index) => {
               if (item?.onlySideMenu) return;
+              const isActive = activeMenu === item.id;
+              console.log(
+                `Item ${item.label}: id="${item.id}", activeMenu="${activeMenu}", isActive=${isActive}`
+              ); // Debug
               return (
                 <Link key={item.id} to={item.path}>
-                  <li className="text-[15px] text-gray-700 font-semibold list-none relative group cursor-pointer hover:text-purple-600 transition-colors duration-300">
+                  <li
+                    className={`text-[15px] font-semibold list-none relative group cursor-pointer transition-colors duration-300 flex items-center gap-2 ${
+                      isActive
+                        ? "text-purple-600"
+                        : "text-gray-700 hover:text-purple-600"
+                    }`}
+                  >
                     {item.label}
+                    {isActive && (
+                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full animate-pulse"></div>
+                    )}
                     <span
-                      className={`absolute inset-x-0 -bottom-1 h-0.5 bg-linear-to-r from-purple-600 to-pink-600 transition-transform duration-300 origin-left 
-        ${
-          activeMenu === item.id ? "scale-x-100" : "scale-x-0"
-        } group-hover:scale-x-100`}
+                      className={`absolute inset-x-0 -bottom-1 h-0.5 bg-linear-to-r from-purple-600 to-pink-600 transition-transform duration-300 origin-left ${
+                        isActive ? "scale-x-100" : "scale-x-0"
+                      } group-hover:scale-x-100`}
                     ></span>
                   </li>
                 </Link>
