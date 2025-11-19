@@ -28,3 +28,11 @@ export const getToastMessageByType = (type) => {
       return 'Blog post saved successfully!';
   }
 };
+
+//sanitize markdown content 
+
+export const sanitizeMarkdown = (content) => {
+  const markdownBlockRegex = /^```(?:markdown)?\n([\s\S]*?)\n```$/gm;
+  const match = content.match(markdownBlockRegex);
+  return match ? match[1] : content;
+};
