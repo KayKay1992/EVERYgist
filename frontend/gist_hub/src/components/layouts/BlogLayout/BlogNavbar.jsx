@@ -20,56 +20,72 @@ const BlogNavbar = ({ activeMenu }) => {
 
   return (
     <>
-      <div className="bg-white border border-b border-gray-200/50 backdrop-blur-[2px] py-4 px-7 sticky">
-        <div className="container mx-auto flex items-center justify-between gap-5">
-          <div className="flex gap-5">
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/60 shadow-sm">
+        {/* Gradient accent line */}
+        <div className="h-1 bg-linear-to-r from-purple-600 via-pink-600 to-rose-600"></div>
+
+        <div className="container mx-auto flex items-center justify-between gap-5 py-4 px-6 md:px-8">
+          <div className="flex items-center gap-4">
             <button
-              className="block lg:hidden text-black -mt-1"
+              className="block lg:hidden text-gray-700 hover:text-purple-600 transition-colors duration-300 p-2 hover:bg-purple-50 rounded-lg"
               onClick={() => {
                 setOpenSideMenu(!openSideMenu);
               }}
+              aria-label="Toggle menu"
             >
               {openSideMenu ? (
-                <HiOutlineX className="text-2xl" />
+                <HiOutlineX className="text-2xl transition-transform duration-300 rotate-90" />
               ) : (
-                <HiOutlineMenu className="text-2xl" />
+                <HiOutlineMenu className="text-2xl transition-transform duration-300 hover:scale-110" />
               )}
             </button>
 
-            <Link to="/">
-              <img src={Logo} alt="logo" className="h-6 md:h-[26px] " />
+            <Link to="/" className="flex items-center gap-3 group">
+              <div className="relative">
+                <div className="absolute inset-0 bg-linear-to-r from-purple-400 to-pink-400 rounded-lg blur-sm opacity-0 group-hover:opacity-40 transition-opacity duration-300"></div>
+                <img
+                  src={Logo}
+                  alt="logo"
+                  className="relative h-7 md:h-8 transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
             </Link>
           </div>
-          <nav className="hidden md:flex items-center gap-10">
+
+          <nav className="hidden md:flex items-center gap-8">
             {BLOG_NAVBAR_DATA.map((item, index) => {
               if (item?.onlySideMenu) return;
               return (
                 <Link key={item.id} to={item.path}>
-                  <li className="text-[15px] text-black font-medium list-none relative group cursor-pointer">
+                  <li className="text-[15px] text-gray-700 font-semibold list-none relative group cursor-pointer hover:text-purple-600 transition-colors duration-300">
                     {item.label}
                     <span
-                      className={`absolute inset-x-0 bottom-0 h-0.5 bg-sky-500 transition-transform duration-300 origin-left 
-        ${index === 0 ? "scale-x-100" : "scale-x-0"} group-hover:scale-x-100`}
+                      className={`absolute inset-x-0 -bottom-1 h-0.5 bg-linear-to-r from-purple-600 to-pink-600 transition-transform duration-300 origin-left 
+        ${
+          activeMenu === item.id ? "scale-x-100" : "scale-x-0"
+        } group-hover:scale-x-100`}
                     ></span>
                   </li>
                 </Link>
               );
             })}
           </nav>
-          <div className="flex items-center gap-6">
+
+          <div className="flex items-center gap-4">
             <button
-              className="hover:text-sky-500 cursor-pointer"
+              className="p-2 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-300 cursor-pointer"
               onClick={() => setOpenSearchBar(true)}
+              aria-label="Search"
             >
               <LuSearch className="text-[22px]" />
             </button>
 
             {!user ? (
               <button
-                className="flext items-center justify-center gap-3 bg-linear-to-r from-sky-500 to-cyan-400 text-xs md:text-sm font-semibold text-white px-5  md:px-7 py-2 rounded-full hover:bg-black hover:text-white transition-colors cursor-pointer hover:shadow-2xl hover:shadow-cyan-200"
+                className="flex items-center justify-center gap-2 bg-linear-to-r from-purple-600 via-pink-600 to-purple-600 text-sm font-semibold text-white px-6 py-2.5 rounded-full hover:shadow-lg hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105"
                 onClick={() => setOpenAuthForm(true)}
               >
-                Login/SignUp
+                <span>Login/SignUp</span>
               </button>
             ) : (
               <div className="hidden md:block">
@@ -79,7 +95,7 @@ const BlogNavbar = ({ activeMenu }) => {
           </div>
 
           {openSideMenu && (
-            <div className="fixed top-[61px] -ml-4 bg-white">
+            <div className="fixed top-[73px] left-0 w-full bg-white/98 backdrop-blur-lg border-b border-gray-200/60 shadow-2xl shadow-purple-100/20 lg:hidden z-40">
               <SideMenu
                 activeMenu={activeMenu}
                 isBlogMenu
