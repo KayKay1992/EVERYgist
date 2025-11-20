@@ -15,21 +15,23 @@ const ProfileInfoCard = () => {
   return (
     user && (
       <div className="flex items-center">
-        <img
-          src={user?.profileImageUrl || ""}
-          alt="Profile Image"
-          className="w-11 h-11 bg-gray-300 rounded-full mr-3"
-        />
+        {user?.profileImageUrl && (
+          <img
+            src={user.profileImageUrl}
+            alt="Profile Image"
+            className="w-11 h-11 bg-gray-300 rounded-full mr-3"
+          />
+        )}
         <div className="flex flex-col text-[15px] text-black font-bold leading-3 ">
           {user?.name || "User Name"}
-      
-        <button
-          className="text-sky-600 font-semibold cursor-pointer hover:underline mt-2"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
-         </div>
+
+          <button
+            className="text-sky-600 font-semibold cursor-pointer hover:underline mt-2"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        </div>
       </div>
     )
   );

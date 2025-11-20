@@ -39,7 +39,7 @@ const SideMenu = ({ activeMenu, isBlogMenu, setOpenSideMenu }) => {
             <div className="absolute inset-0 bg-linear-to-r from-purple-400 to-pink-400 rounded-full blur-md opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
             {user?.profileImageUrl ? (
               <img
-                src={user?.profileImageUrl || ""}
+                src={user.profileImageUrl}
                 alt="Profile Image"
                 className="relative w-20 h-20 rounded-full object-cover ring-4 ring-white shadow-lg transition-transform duration-300 group-hover:scale-105"
               />

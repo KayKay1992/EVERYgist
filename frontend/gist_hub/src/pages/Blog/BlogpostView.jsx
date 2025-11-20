@@ -16,6 +16,7 @@ import { useParams } from "react-router-dom";
 import MarkdownContent from "./components/MarkdownContent";
 import SharePost from "./components/SharePost";
 import { sanitizeMarkdown } from "../../utils/helper";
+import CommentInfo from "./components/CommentInfo";
 
 const BlogpostView = () => {
   const { slug } = useParams();
@@ -91,7 +92,27 @@ const BlogpostView = () => {
   };
 
   //Add a reply
-  const handleAddReply = async () => {};
+  const handleAddReply = async () => {
+    try {
+      // Validate comment
+      if (!replyText || !replyText.trim()) {
+        toast.error("Comment cannot be empty");
+        return;
+      }
+
+      // Make API call to add reply
+      await axiosInstance.post(API_PATHS.COMMENTS.ADD(blogPostData._id), {
+        content: replyText,
+      });
+      toast.success("Comment added successfully");
+      setIsShowReplyForm(false);
+      setReplyText("");
+      fetchCommentByPostId(blogPostData._id);
+    } catch (error) {
+      console.error("Error adding reply:", error);
+      toast.error("Failed to add comment. Please try again.");
+    }
+  };
 
   //on Mount
   useEffect(() => {
@@ -205,11 +226,13 @@ const BlogpostView = () => {
                     <div className="relative rounded-2xl overflow-hidden shadow-2xl group">
                       <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                       <div className="absolute -inset-0.5 bg-linear-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
-                      <img
-                        src={blogPostData.coverImageUrl || ""}
-                        alt={blogPostData.title}
-                        className="relative w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700"
-                      />
+                      {blogPostData.coverImageUrl && (
+                        <img
+                          src={blogPostData.coverImageUrl}
+                          alt={blogPostData.title}
+                          className="relative w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700"
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -252,15 +275,170 @@ const BlogpostView = () => {
                     <SharePost title={blogPostData.title} />
                   </div>
 
-                  {/* Comments Section Placeholder */}
-                  <div className="mt-12 bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                      <div className="w-1.5 h-8 bg-linear-to-b from-purple-600 to-pink-600 rounded-full"></div>
-                      Comments
-                    </h3>
-                    <p className="text-gray-500">
-                      Comments section coming soon...
-                    </p>
+                  {/* Comments Section */}
+                  <div className="mt-12 relative">
+                    {/* Background Decoration */}
+                    <div className="absolute -top-6 -left-6 w-72 h-72 bg-purple-100/30 rounded-full blur-3xl"></div>
+                    <div className="absolute -bottom-6 -right-6 w-72 h-72 bg-pink-100/30 rounded-full blur-3xl"></div>
+
+                    <div className="relative bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
+                      {/* Header with Gradient Accent */}
+                      <div className="relative bg-linear-to-r from-purple-50 via-pink-50 to-rose-50 border-b border-gray-200 p-8">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-purple-600 via-pink-600 to-rose-600"></div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg">
+                                <svg
+                                  className="w-6 h-6 text-white"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                  />
+                                </svg>
+                              </div>
+                              <div>
+                                <h4 className="text-2xl font-bold text-gray-900">
+                                  Discussion
+                                </h4>
+                                <p className="text-sm text-gray-600 mt-0.5">
+                                  {comments?.length || 0}{" "}
+                                  {comments?.length === 1
+                                    ? "comment"
+                                    : "comments"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            className="group flex items-center gap-2 px-6 py-3 bg-linear-to-r from-purple-600 to-pink-600 text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
+                            onClick={() => {
+                              if (!user) {
+                                setOpenAuthForm(true);
+                                return;
+                              }
+                              setIsShowReplyForm(true);
+                            }}
+                          >
+                            <svg
+                              className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M12 4v16m8-8H4"
+                              />
+                            </svg>
+                            <span>Add Comment</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Comments List */}
+                      <div className="p-8">
+                        {/* Reply Form */}
+                        {isShowReplyForm && (
+                          <div className="mb-8 bg-linear-to-r from-purple-50/50 to-pink-50/50 rounded-2xl p-6 border-2 border-dashed border-purple-200 animate-in slide-in-from-top duration-300">
+                            <CommentReplyInput
+                              user={user}
+                              authorName={user.name}
+                              content={""}
+                              replyText={replyText}
+                              setReplyText={setReplyText}
+                              handleCancelReply={handleCancelReply}
+                              handleAddReply={handleAddReply}
+                              disableAutoGen
+                              type="new"
+                            />
+                          </div>
+                        )}
+
+                        {/* Comments */}
+                        {comments?.length > 0 ? (
+                          <div className="space-y-6">
+                            {comments.map((comment, index) => (
+                              <div key={comment._id} className="relative">
+                                {index > 0 && (
+                                  <div className="absolute -top-3 left-0 right-0 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent"></div>
+                                )}
+                                <CommentInfo
+                                  commentId={comment._id || ""}
+                                  authorName={comment.author.name}
+                                  authorPhoto={comment.author.profileImageUrl}
+                                  content={comment.content}
+                                  updatedOn={
+                                    comment.updatedAt
+                                      ? moment(comment.updatedAt).format(
+                                          "Do MMM YYYY"
+                                        )
+                                      : "-"
+                                  }
+                                  post={comment.post}
+                                  replies={comment.replies || []}
+                                  getAllComments={() =>
+                                    fetchCommentByPostId(blogPostData._id)
+                                  }
+                                  onDelete={(commentId) =>
+                                    setOpenDeleteAlert({
+                                      open: true,
+                                      data: commentId || comment._id,
+                                    })
+                                  }
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-16">
+                            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-linear-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                              <svg
+                                className="w-12 h-12 text-purple-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                />
+                              </svg>
+                            </div>
+                            <h5 className="text-xl font-semibold text-gray-900 mb-2">
+                              No comments yet
+                            </h5>
+                            <p className="text-gray-600 mb-6">
+                              Be the first to share your thoughts!
+                            </p>
+                            <button
+                              className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-purple-600 to-pink-600 text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold"
+                              onClick={() => {
+                                if (!user) {
+                                  setOpenAuthForm(true);
+                                  return;
+                                }
+                                setIsShowReplyForm(true);
+                              }}
+                            >
+                              Start the conversation
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

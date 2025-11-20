@@ -53,21 +53,23 @@ const CommentReplyInput = ({
       <div className="pl-4 py-3 bg-linear-to-br from-sky-50/40 via-white to-sky-50/20 rounded-xl border border-sky-100/50 shadow-sm hover:shadow-md transition-all duration-300">
         <div className="flex gap-3 items-start">
           {/* User Avatar with glow effect */}
-          <div className="relative">
-            <img
-              src={user?.profileImageUrl}
-              alt={user?.name}
-              className="w-10 h-10 rounded-full ring-2 ring-sky-100 hover:ring-sky-300 transition-all duration-300"
-            />
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
-          </div>
+          {user?.profileImageUrl && (
+            <div className="relative">
+              <img
+                src={user.profileImageUrl}
+                alt={user?.name}
+                className="w-10 h-10 rounded-full ring-2 ring-sky-100 hover:ring-sky-300 transition-all duration-300"
+              />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
+            </div>
+          )}
 
           <div className="flex-1 space-y-3">
             {/* Input Field */}
             <div className="relative">
               <Input
                 value={replyText}
-                onChange={(target) => setReplyText(target.value)}
+                onChange={(e) => setReplyText(e.target.value)}
                 label={type == "new" ? authorName : `Reply to @${authorName}`}
                 placeholder={
                   type == "new"
