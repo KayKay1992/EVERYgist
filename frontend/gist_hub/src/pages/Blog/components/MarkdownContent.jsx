@@ -25,7 +25,7 @@ const MarkdownContent = ({ content }) => {
                 />
               ) : (
                 <code
-                  className="px-2 py-1 rounded-md text-sm bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 font-mono border border-purple-200"
+                  className="px-2 py-1 rounded-md text-sm bg-linear-to-r from-purple-50 to-pink-50 text-purple-700 font-mono border border-purple-200"
                   {...props}
                 >
                   {children}
@@ -43,7 +43,7 @@ const MarkdownContent = ({ content }) => {
 
             strong({ children }) {
               return (
-                <strong className="font-bold text-gray-900 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <strong className="font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                   {children}
                 </strong>
               );
@@ -69,7 +69,7 @@ const MarkdownContent = ({ content }) => {
 
             li({ children }) {
               return (
-                <li className="text-gray-700 leading-relaxed pl-2 relative before:content-[''] before:absolute before:left-[-20px] before:top-[12px] before:w-2 before:h-2 before:bg-gradient-to-r before:from-purple-500 before:to-pink-500 before:rounded-full">
+                <li className="text-gray-700 leading-relaxed pl-2 relative before:content-[''] before:absolute before:-left-5 before:top-3 before:w-2 before:h-2 before:bg-linear-to-r before:from-purple-500 before:to-pink-500 before:rounded-full">
                   {children}
                 </li>
               );
@@ -78,7 +78,7 @@ const MarkdownContent = ({ content }) => {
             blockquote({ children }) {
               return (
                 <div className="relative my-8 pl-6 pr-6 py-1">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-purple-500 via-pink-500 to-rose-500 rounded-full"></div>
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-purple-500 via-pink-500 to-rose-500 rounded-full"></div>
                   <LuQuote
                     className="absolute -left-1 -top-3 text-purple-400 opacity-20"
                     size={40}
@@ -92,7 +92,7 @@ const MarkdownContent = ({ content }) => {
 
             h1({ children }) {
               return (
-                <h1 className="text-4xl font-extrabold mt-12 mb-6 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent leading-tight">
+                <h1 className="text-4xl font-extrabold mt-12 mb-6 bg-linear-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent leading-tight">
                   {children}
                 </h1>
               );
@@ -104,7 +104,7 @@ const MarkdownContent = ({ content }) => {
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">
                     {children}
                   </h2>
-                  <div className="w-20 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                  <div className="w-20 h-1 bg-linear-to-r from-purple-500 to-pink-500 rounded-full"></div>
                 </div>
               );
             },
@@ -112,7 +112,7 @@ const MarkdownContent = ({ content }) => {
             h3({ children }) {
               return (
                 <h3 className="text-2xl font-bold mt-10 mb-4 text-gray-900 flex items-center gap-3">
-                  <span className="w-1.5 h-6 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></span>
+                  <span className="w-1.5 h-6 bg-linear-to-b from-purple-500 to-pink-500 rounded-full"></span>
                   {children}
                 </h3>
               );
@@ -150,7 +150,7 @@ const MarkdownContent = ({ content }) => {
             },
             thead({ children }) {
               return (
-                <thead className="bg-gradient-to-r from-purple-50 to-pink-50">
+                <thead className="bg-linear-to-r from-purple-50 to-pink-50">
                   {children}
                 </thead>
               );
@@ -178,13 +178,13 @@ const MarkdownContent = ({ content }) => {
             hr() {
               return (
                 <div className="my-12 flex items-center justify-center">
-                  <div className="flex-grow h-px bg-gradient-to-r from-transparent via-purple-300 to-transparent"></div>
+                  <div className="grow h-px bg-linear-to-r from-transparent via-purple-300 to-transparent"></div>
                   <div className="mx-4 flex gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
                     <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
                   </div>
-                  <div className="flex-grow h-px bg-gradient-to-r from-transparent via-pink-300 to-transparent"></div>
+                  <div className="grow h-px bg-linear-to-r from-transparent via-pink-300 to-transparent"></div>
                 </div>
               );
             },
@@ -220,7 +220,7 @@ function CodeBlock({ code, language }) {
   return (
     <div className="relative my-8 rounded-xl overflow-hidden border border-gray-800 shadow-2xl group">
       {/* Header with gradient */}
-      <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-gray-800 via-gray-850 to-gray-900 border-b border-gray-700">
+      <div className="flex items-center justify-between px-5 py-3 bg-linear-to-r from-gray-800 via-gray-850 to-gray-900 border-b border-gray-700">
         <div className="flex items-center space-x-3">
           <div className="flex gap-1.5">
             <span className="w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-500/50"></span>
@@ -262,7 +262,7 @@ function CodeBlock({ code, language }) {
       </div>
 
       {/* Code content with subtle gradient background */}
-      <div className="relative bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950">
+      <div className="relative bg-linear-to-br from-gray-900 via-gray-900 to-gray-950">
         <pre className="p-5 overflow-x-auto">
           <code className="text-[15px] leading-relaxed text-gray-100 font-mono">
             {code}
