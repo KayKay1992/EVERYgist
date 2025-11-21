@@ -27,7 +27,7 @@ const SideMenu = ({ activeMenu, isBlogMenu, setOpenSideMenu }) => {
     navigate("/");
   };
   return (
-    <div className="w-64 h-[calc(100vh-73px)] bg-linear-to-br from-white via-purple-50/20 to-pink-50/10 border-r border-purple-100/50 p-6 sticky top-[73px] z-50 shadow-lg overflow-y-auto">
+    <div className="w-56 h-[calc(100vh-73px)] bg-white border-r border-purple-100/50 p-6 sticky top-[73px] z-50 shadow-lg overflow-y-auto">
       {/* Decorative Elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-purple-400/10 to-transparent rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-linear-to-tr from-pink-400/10 to-transparent rounded-full blur-2xl"></div>
