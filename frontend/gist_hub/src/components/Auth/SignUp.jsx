@@ -83,19 +83,20 @@ const SignUp = ({ setCurrentPage }) => {
     }
   };
   return (
-    <div className="flex items-center h-auto md:h-[520px]">
-      <div className="w-[90vw] md:w-[43vw] p-7 flex flex-col justify-center">
-        <h3 className="text-lg font-semibold text-black">
-          {" "}
-          Create an account{" "}
-        </h3>
-        <p className="text-xs text-slate-700 mt-0.5 mb-6">
-          Please fill in the details below to create an account.
-        </p>
+    <div className="flex items-center min-h-[520px]">
+      <div className="w-[90vw] md:w-[45vw] p-10 flex flex-col justify-center">
+        <div className="mb-6">
+          <h3 className="text-3xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Create an account
+          </h3>
+          <p className="text-sm text-gray-600">
+            Please fill in the details below to create an account.
+          </p>
+        </div>
 
-        <form className="" onSubmit={handleSignUp}>
+        <form className="space-y-4" onSubmit={handleSignUp}>
           <ProfilePhotoSelector image={profilePic} setImage={setProfilePic} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 ">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               value={fullName}
               onChange={({ target }) => setFullName(target.value)}
@@ -128,15 +129,20 @@ const SignUp = ({ setCurrentPage }) => {
               placeholder="Enter admin access token"
             />
           </div>
-          {error && <p className="text-red-500 text-xs pb-2.5">{error}</p>}
-          <button type="submit" className="btn-primary mt-4">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-md">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+          <button type="submit" className="btn-primary w-full mt-4">
             Sign Up
           </button>
 
-          <p className="text-[13px] text-slate-800 mt-3">
+          <p className="text-sm text-gray-600 text-center">
             Already have an account?{" "}
             <button
-              className="font-medium text-primary underline cursor-pointer"
+              type="button"
+              className="font-semibold text-primary hover:underline cursor-pointer"
               onClick={() => setCurrentPage("login")}
             >
               Log In
@@ -144,8 +150,12 @@ const SignUp = ({ setCurrentPage }) => {
           </p>
         </form>
       </div>
-      <div className="hidden md:block ">
-        <img src={AUTH_IMG} alt="Login" className="h-[520px] w-[43vw]" />
+      <div className="hidden md:block">
+        <img
+          src={AUTH_IMG}
+          alt="Login"
+          className="h-[520px] w-auto object-cover"
+        />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap");
 @import "tailwindcss";
 
-@theme{
+@theme {
   --font-display: "Urbanist", sans-serif;
   --breakpoint-3xl: 1920px;
   --color-primary: #00a7f3;
@@ -64,12 +64,11 @@
 }
 
 .btn-primary {
-  @apply w-full flex items-center justify-center gap-3 text-sm font-semibold text-white bg-linear-to-r from-sky-500 to-cyan-400 p-2.5 rounded-md my-1 transition-all hover:scale-[1.01] hover:text-white cursor-pointer;
+  @apply w-full flex items-center justify-center gap-3 text-sm font-semibold text-white bg-linear-to-r from-purple-600 to-pink-600 p-2.5 rounded-lg my-1 transition-all hover:from-purple-700 hover:to-pink-700 hover:shadow-lg hover:shadow-purple-200 cursor-pointer;
 }
 
-
 .btn-small {
-  @apply flex items-center justify-center gap-3 bg-linear-to-r from-sky-500 to-cyan-400 text-sm font-semibold text-white px-7 py-2 rounded-lg hover:bg-black hover:text-white transition-colors cursor-pointer hover:shadow-2xl hover:shadow-sky-200;
+  @apply flex items-center justify-center gap-3 bg-linear-to-r from-blue-600 to-purple-600 text-sm font-semibold text-white px-7 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all cursor-pointer hover:shadow-lg hover:shadow-purple-200;
 }
 
 .form-card {

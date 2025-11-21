@@ -19,12 +19,12 @@ const Login = ({ setCurrentPage }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if(!validateEmail(email)){
+    if (!validateEmail(email)) {
       setError("Please enter a valid email address");
       return;
     }
 
-    if(!password){
+    if (!password) {
       setError("Please enter your password");
       return;
     }
@@ -32,25 +32,30 @@ const Login = ({ setCurrentPage }) => {
     setError(""); //clear previous errors
 
     //Login API call
-    try{
-      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, { email, password });
+    try {
+      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
+        email,
+        password,
+      });
 
-      const {token, role } = response.data;
-      if(token){
+      const { token, role } = response.data;
+      if (token) {
         localStorage.setItem("token", token);
         updateUser(response.data);
 
         //Navigate based on role
-        if(role === "admin"){
-           setOpenAuthForm(false);
+        if (role === "admin") {
+          setOpenAuthForm(false);
           navigate("/admin/dashboard");
-        } 
+        }
         setOpenAuthForm(false);
-       
       }
-
-    }catch(error){
-      if(error.response && error.response.data && error.response.data.message){
+    } catch (error) {
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
         setError(error.response.data.message);
       } else {
         setError("An error occurred during login. Please try again.");
@@ -58,13 +63,17 @@ const Login = ({ setCurrentPage }) => {
     }
   };
   return (
-    <div className="flex items-center">
-      <div className="w-[90vw] md:w-[33vw] p-7 flex flex-col justify-center">
-        <h3 className="text-lg font-semibold text-black">Welcome Back</h3>
-        <p className="text-xs text-slate-700 mt-0.5 mb-6 ">
-          Please enter your details to login.
-        </p>
-        <form className="" onSubmit={handleLogin}>
+    <div className="flex items-center min-h-[450px]">
+      <div className="w-[90vw] md:w-[40vw] p-10 flex flex-col justify-center">
+        <div className="mb-8">
+          <h3 className="text-3xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+            Welcome Back
+          </h3>
+          <p className="text-sm text-gray-600">
+            Please enter your details to login.
+          </p>
+        </div>
+        <form className="space-y-4" onSubmit={handleLogin}>
           <Input
             type="email"
             label="Email Address"
@@ -79,14 +88,19 @@ const Login = ({ setCurrentPage }) => {
             onChange={({ target }) => setPassword(target.value)}
             placeholder="Enter your password"
           />
-          {error && <p className="text-red-600 text-xs pb-2.5">{error}</p>}
-          <button type="submit" className="btn-primary">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-md">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+          <button type="submit" className="btn-primary w-full">
             LOGIN
           </button>
-          <p className="text-[13px] text-slate-800 mt-3">
+          <p className="text-sm text-gray-600 text-center">
             Don't have an account?{" "}
             <button
-              className="font-medium text-primary underline cursor-pointer"
+              type="button"
+              className="font-semibold text-primary hover:underline cursor-pointer"
               onClick={() => {
                 setCurrentPage("signup");
               }}
@@ -96,12 +110,11 @@ const Login = ({ setCurrentPage }) => {
           </p>
         </form>
       </div>
-      <div className="hidden md:block ">
+      <div className="hidden md:block">
         <img
           src={AUTH_IMG}
           alt="auth-img"
-          className="
-        h-[400px]"
+          className="h-[450px] w-auto object-cover"
         />
       </div>
     </div>
