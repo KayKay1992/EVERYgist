@@ -8,6 +8,7 @@ import BlogPostSummary from "./components/BlogPostSummary";
 import moment from "moment";
 import TrendingPostsSection from "./components/TrendingPostsSection";
 import { LuTag, LuSearch, LuBookmark } from "react-icons/lu";
+import { BLOG_NAVBAR_DATA } from "../../utils/data";
 
 const PostByTags = () => {
   const { tagName } = useParams();
@@ -41,8 +42,14 @@ const PostByTags = () => {
     return () => {};
   }, [tagName]);
 
+  // Find the active menu item based on current tag
+  const activeMenuItem = BLOG_NAVBAR_DATA.find(
+    (item) => item.path === `/tag/${tagName}`
+  );
+  const activeMenuId = activeMenuItem?.id;
+
   return (
-    <BlogLayout>
+    <BlogLayout activeMenu={activeMenuId}>
       <div className="min-h-screen bg-linear-to-br from-gray-50 via-purple-50/20 to-pink-50/20">
         {/* Hero Section with Tag Header */}
         <div className="relative overflow-hidden bg-white border-b border-gray-200">
