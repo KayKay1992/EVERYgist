@@ -18,6 +18,7 @@ import SharePost from "./components/SharePost";
 import { sanitizeMarkdown } from "../../utils/helper";
 import CommentInfo from "./components/CommentInfo";
 import Drawer from "../../components/Drawer";
+import LikeCommentButton from "./components/LikeCommentButton";
 
 const BlogpostView = () => {
   const { slug } = useParams();
@@ -265,8 +266,15 @@ const BlogpostView = () => {
                         />
                       )}
                     </div>
+
+
                   </div>
 
+                  <LikeCommentButton
+                     postId={blogPostData._id || ""}
+                     likes={blogPostData.likes || 0}
+                     comments={comments?.length || 0}
+                    />
                   {/* Trending Posts Sidebar - Takes 1/3 on large screens */}
                   <div className="lg:col-span-1">
                     <div className="sticky top-24 space-y-6">

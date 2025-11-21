@@ -1,5 +1,5 @@
 ================================================================================
-                    BLOG POST SEARCH IMPLEMENTATION DOCUMENTATION
+              FLOATING LIKE & COMMENT BUTTON IMPLEMENTATION DOCUMENTATION
 ================================================================================
 
 TABLE OF CONTENTS
@@ -7,48 +7,45 @@ TABLE OF CONTENTS
 1. Overview & Purpose
 2. System Architecture
 3. Backend Implementation
-4. Frontend Components
-5. Search Bar Popup Component
-6. Search Results Page Component
-7. URL Query Parameters
-8. State Management
-9. UI/UX Design Features
-10. Loading & Empty States
-11. Search Algorithm
-12. Performance Considerations
-13. User Experience Enhancements
-14. Integration Flow
-15. Future Enhancements
+4. Frontend Component Structure
+5. State Management
+6. Like Functionality Logic
+7. UI/UX Design Features
+8. Advanced Visual Effects
+9. Tooltip Implementation
+10. Animation Details
+11. Accessibility Features
+12. Performance Optimizations
+13. Integration with Blog Post
+14. Future Enhancements
+15. Technical Deep Dive
 
 ================================================================================
 1. OVERVIEW & PURPOSE
 ================================================================================
 
-The Blog Post Search feature allows users to search through all published blog
-posts by title and content keywords, providing instant access to relevant
-articles.
+The Floating Like & Comment Button is a fixed-position action button that
+provides instant access to post engagement features from anywhere on the page.
 
-KEY BENEFITS:
-  ✓ Fast content discovery
-  ✓ Full-text search across titles and content
-  ✓ Case-insensitive search
-  ✓ Real-time results
-  ✓ Beautiful, intuitive UI
-  ✓ Mobile responsive design
+KEY FEATURES:
+  ✓ Fixed floating position (bottom-right)
+  ✓ One-click like functionality
+  ✓ Real-time like count updates
+  ✓ Comment count display
+  ✓ Advanced hover animations
+  ✓ Visual feedback on actions
+  ✓ Tooltips with emojis
+  ✓ Responsive design
 
-USER FLOW:
-  1. User clicks search icon in navbar
-  2. Search popup modal opens
-  3. User types search query
-  4. User presses Enter or clicks Search button
-  5. Navigates to /search?query=keyword
-  6. Results display with matching posts
-  7. User clicks on post to read full article
+USER BENEFITS:
+  • Always visible while scrolling
+  • Quick engagement without scrolling back
+  • Immediate visual feedback
+  • Beautiful, modern UI
+  • Professional animations
 
-EXAMPLE SEARCHES:
-  • /search?query=react
-  • /search?query=programming
-  • /search?query=health tips
+COMPONENT LOCATION:
+File: frontend/gist_hub/src/pages/Blog/components/LikeCommentButton.jsx
 
 ================================================================================
 2. SYSTEM ARCHITECTURE
@@ -59,91 +56,106 @@ DATA FLOW DIAGRAM:
 │                         USER INTERACTION                                │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
-                   User clicks search icon
+                   User clicks Like button
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      SEARCH BAR POPUP OPENS                             │
-│  Component: SearchBarPopup.jsx                                          │
-│  State: isOpen, query                                                   │
+│                      COMPONENT EVENT HANDLER                            │
+│  Function: handleLikeClick()                                            │
+│  Validates: postId exists                                               │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
-                   User types "react hooks"
+                   postId valid
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         NAVIGATION TRIGGER                              │
-│  Action: handleSearch() called                                          │
-│  Navigate to: /search?query=react%20hooks                               │
+│                      OPTIMISTIC UI UPDATE                               │
+│  setPostLikes(prev => prev + 1)  // Increment count immediately         │
+│  setLiked(true)                   // Trigger animation                  │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
-                   Route matches /search
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      SEARCHPOSTS COMPONENT MOUNTS                       │
-│  Component: SearchPosts.jsx                                             │
-│  Extract query from URL: useSearchParams()                              │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │
-                   useEffect triggers handleSearch()
+                   UI updates instantly
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           API REQUEST                                   │
-│  GET /api/posts/search?q=react hooks                                    │
+│  POST /api/posts/:id/like                                               │
+│  Headers: { Authorization: Bearer <token> }                             │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      BACKEND ROUTE HANDLER                              │
-│  Route: GET /api/posts/search                                           │
-│  Controller: searchPosts()                                              │
+│                      BACKEND AUTHENTICATION                             │
+│  Middleware: protect (verifies JWT token)                               │
+│  Extracts user from token                                               │
 └────────────────────────────┬────────────────────────────────────────────┘
+                             │
+                   User authenticated
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      MONGODB SEARCH QUERY                               │
-│  BlogPost.find({                                                        │
-│    isDraft: false,                                                      │
-│    $or: [                                                               │
-│      { title: { $regex: "react hooks", $options: "i" } },               │
-│      { content: { $regex: "react hooks", $options: "i" } }              │
-│    ]                                                                    │
+│                      DATABASE UPDATE                                    │
+│  BlogPost.findByIdAndUpdate(postId, {                                   │
+│    $inc: { likes: 1 }  // Atomic increment                              │
 │  })                                                                     │
-│  .populate("author", "name profileImageUrl")                            │
-│  .sort({ createdAt: -1 })                                               │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
-                   Returns array of matching posts
+                   Database updated
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         JSON RESPONSE                                   │
-│  [                                                                      │
-│    {                                                                    │
-│      _id: "...",                                                        │
-│      title: "Introduction to React Hooks",                              │
-│      content: "React hooks are...",                                     │
-│      tags: ["react", "programming"],                                    │
-│      author: { name: "John Doe", profileImageUrl: "..." },              │
-│      createdAt: "2025-11-20T..."                                        │
-│    },                                                                   │
-│    ...                                                                  │
-│  ]                                                                      │
+│  { message: "Like added" }                                              │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
-                   Frontend receives response
+                   Response received
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      STATE UPDATE & RENDERING                           │
-│  setSearchResults(response.data)                                        │
-│  setIsLoading(false)                                                    │
-│  → Displays search results with animations                              │
-│  → Shows result count                                                   │
-│  → Renders BlogPostSummary cards                                        │
+│                      ANIMATION RESET                                    │
+│  setTimeout(() => {                                                     │
+│    setLiked(false)  // Reset animation after 100ms                      │
+│  }, 100)                                                                │
+└────────────────────────────┬────────────────────────────────────────────┘
+                             │
+                   Animation completes
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         FINAL STATE                                     │
+│  • Like count incremented                                               │
+│  • Visual feedback completed                                            │
+│  • Button returns to normal state                                       │
 └─────────────────────────────────────────────────────────────────────────┘
+
+COMPONENT HIERARCHY:
+─────────────────────────────────────────────────────────────────────────────
+BlogpostView
+    └── LikeCommentButton
+            ├── Like Button Container
+            │   ├── Glow Effect Layer
+            │   ├── Button Element
+            │   │   ├── Background Gradient
+            │   │   ├── Ripple Effect
+            │   │   ├── Icon (PiHandsClapping)
+            │   │   ├── Sparkle Animation
+            │   │   ├── Like Count
+            │   │   └── Tooltip
+            │   └── (onClick: handleLikeClick)
+            │
+            ├── Decorative Divider
+            │   ├── Gradient Line
+            │   └── Center Dot
+            │
+            └── Comment Button Container
+                ├── Glow Effect Layer
+                └── Button Element
+                    ├── Background Gradient
+                    ├── Ripple Effect
+                    ├── Icon (LuMessageCircleDashed)
+                    ├── Notification Badge
+                    ├── Comment Count
+                    └── Tooltip
 
 ================================================================================
 3. BACKEND IMPLEMENTATION
@@ -154,45 +166,38 @@ ROUTE DEFINITION:
 File: backend/routes/blogPostRoutes.js
 
 ```javascript
-const { searchPosts } = require("../controllers/blogPostController");
+const { likePost } = require("../controllers/blogPostController");
+const { protect } = require("../middleware/authMiddleware");
 
-router.get("/search", searchPosts);
+router.post("/:id/like", protect, likePost);
 ```
 
-Route Pattern: /api/posts/search?q=keyword
-Method: GET
-Query Parameter: q (search keyword)
-Access: Public (no authentication required)
+Route Pattern: POST /api/posts/:id/like
+Method: POST
+URL Parameter: :id (Blog post ID)
+Middleware: protect (Authentication required)
+Access: Protected (logged-in users only)
 
 CONTROLLER FUNCTION:
 ─────────────────────────────────────────────────────────────────────────────
 File: backend/controllers/blogPostController.js
 
 ```javascript
-// @desc    Search posts by title and content
-// @route   GET /api/posts/search?q=keyword
-// @access  Public
-const searchPosts = async (req, res) => {
+// @desc    Like a post
+// @route   PUT /api/posts/:id/like
+// @access  Protected
+const likePost = async (req, res) => {
   try {
-    // 1. Extract search query from request
-    const q = req.query.q;
+    // Atomic increment of likes field
+    await BlogPost.findByIdAndUpdate(req.params.id, {
+      $inc: { likes: 1 }  // Increment likes by 1
+    });
     
-    // 2. Search in database
-    const posts = await BlogPost.find({
-      isDraft: false,  // Only published posts
-      $or: [           // Search in multiple fields
-        { title: { $regex: q, $options: "i" } },     // Title search
-        { content: { $regex: q, $options: "i" } }    // Content search
-      ],
-    })
-    .populate("author", "name profileImageUrl")  // Join author data
-    .sort({ createdAt: -1 });                    // Newest first
-
-    // 3. Return results
-    res.json(posts);
-
+    // Return success message
+    res.json({ message: 'Like added' });
+    
   } catch (err) {
-    // 4. Handle errors
+    // Handle errors
     res.status(500).json({ 
       message: "Server Error", 
       error: err.message 
@@ -201,117 +206,147 @@ const searchPosts = async (req, res) => {
 };
 ```
 
-QUERY BREAKDOWN:
+MONGODB ATOMIC OPERATION:
 ─────────────────────────────────────────────────────────────────────────────
-1. EXTRACT QUERY:
 ```javascript
-const q = req.query.q;
-```
-• Reads 'q' parameter from URL query string
-• Example: /search?q=react → q = "react"
-
-2. BUILD SEARCH CRITERIA:
-```javascript
-BlogPost.find({
-  isDraft: false,
-  $or: [
-    { title: { $regex: q, $options: "i" } },
-    { content: { $regex: q, $options: "i" } }
-  ]
-})
+BlogPost.findByIdAndUpdate(postId, { $inc: { likes: 1 } })
 ```
 
-• isDraft: false - Only published posts
-• $or - Matches if ANY condition is true
-• $regex - Pattern matching (like SQL LIKE)
-• $options: "i" - Case-insensitive search
+Why Atomic Increment ($inc)?
+• Thread-safe: Multiple users can like simultaneously
+• No race conditions: Doesn't read-modify-write
+• Performance: Single database operation
+• Reliable: Guaranteed consistency
 
-3. POPULATE AUTHOR:
-```javascript
-.populate("author", "name profileImageUrl")
+Example:
 ```
-• Joins User collection
-• Replaces author ObjectId with user object
-• Only returns name and profileImageUrl
+Initial: { likes: 42 }
 
-4. SORT RESULTS:
-```javascript
-.sort({ createdAt: -1 })
+User A clicks like → $inc: { likes: 1 } → { likes: 43 }
+User B clicks like → $inc: { likes: 1 } → { likes: 44 }
+
+Both increments work correctly even if simultaneous
 ```
-• -1 = descending order
-• Shows newest posts first
 
-MONGODB REGEX SEARCH:
+Without $inc (WRONG):
+```javascript
+// ❌ Race condition possible
+const post = await BlogPost.findById(postId);
+post.likes = post.likes + 1;
+await post.save();
+```
+
+DATABASE SCHEMA:
 ─────────────────────────────────────────────────────────────────────────────
-Example Query:
-```javascript
-q = "react hooks"
+File: backend/models/BlogPost.js
 
-// MongoDB query becomes:
-{
-  isDraft: false,
-  $or: [
-    { title: /react hooks/i },    // Case-insensitive regex
-    { content: /react hooks/i }
-  ]
-}
+```javascript
+const blogPostSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  likes: { type: Number, default: 0 },  // Like counter
+  // ... other fields
+}, { timestamps: true });
 ```
 
-Matches:
-✓ Title: "Introduction to React Hooks" 
-✓ Title: "React Hooks Tutorial"
-✓ Content: "...learn react hooks..."
-✗ Title: "Vue Composition API" (doesn't match)
+AUTHENTICATION MIDDLEWARE:
+─────────────────────────────────────────────────────────────────────────────
+File: backend/middleware/authMiddleware.js
+
+```javascript
+const protect = async (req, res, next) => {
+  // Extract token from Authorization header
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ message: 'Not authorized' });
+  }
+  
+  try {
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Attach user to request
+    req.user = await User.findById(decoded.id).select('-password');
+    
+    next();  // Proceed to likePost controller
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
+```
+
+Why Protected Route?
+• Prevents spam/bot likes
+• Associates likes with users
+• Enables future features (unlike, like history)
+• Security best practice
 
 RESPONSE FORMAT:
 ─────────────────────────────────────────────────────────────────────────────
 Success (200):
 ```json
-[
-  {
-    "_id": "507f1f77bcf86cd799439011",
-    "title": "Introduction to React Hooks",
-    "content": "React hooks revolutionized...",
-    "coverImageUrl": "https://...",
-    "slug": "introduction-to-react-hooks",
-    "tags": ["react", "programming", "javascript"],
-    "author": {
-      "_id": "507f1f77bcf86cd799439012",
-      "name": "John Doe",
-      "profileImageUrl": "https://..."
-    },
-    "createdAt": "2025-11-15T10:30:00.000Z",
-    "updatedAt": "2025-11-20T14:20:00.000Z"
-  }
-]
+{
+  "message": "Like added"
+}
 ```
 
 Error (500):
 ```json
 {
   "message": "Server Error",
-  "error": "Detailed error message"
+  "error": "Cast to ObjectId failed for value..."
+}
+```
+
+Unauthorized (401):
+```json
+{
+  "message": "Not authorized"
 }
 ```
 
 ================================================================================
-4. FRONTEND COMPONENTS
+4. FRONTEND COMPONENT STRUCTURE
 ================================================================================
 
-COMPONENT HIERARCHY:
+FILE: LikeCommentButton.jsx
 ─────────────────────────────────────────────────────────────────────────────
-BlogNavbar (or any navbar)
-    └── SearchBarPopup
-            ↓ (on search)
-        Navigate to /search?query=keyword
-            ↓
-        SearchPosts
-            ├── Hero Section
-            ├── Search Results
-            │   └── BlogPostSummary (multiple)
-            └── Sidebar
-                ├── TrendingPostsSection
-                └── Search Tips Card
+Location: frontend/gist_hub/src/pages/Blog/components/LikeCommentButton.jsx
+
+IMPORTS:
+```javascript
+import { LuMessageCircleDashed } from "react-icons/lu";     // Comment icon
+import { PiHandsClapping } from "react-icons/pi";           // Like icon
+import axiosInstance from "../../../utils/axioInstance";     // HTTP client
+import { API_PATHS } from "../../../utils/apiPaths";         // API routes
+import clsx from "clsx";                                     // Conditional classes
+import { useState } from "react";                            // React hooks
+```
+
+COMPONENT SIGNATURE:
+```javascript
+const LikeCommentButton = ({ likes, comments, postId }) => {
+  // Component logic
+}
+```
+
+PROPS:
+─────────────────────────────────────────────────────────────────────────────
+| Prop     | Type   | Description                    | Example |
+|----------|--------|--------------------------------|---------|
+| likes    | Number | Initial like count             | 42      |
+| comments | Number | Total comment count            | 15      |
+| postId   | String | MongoDB ObjectId of blog post  | "507f..." |
+
+Props passed from BlogpostView:
+```javascript
+<LikeCommentButton 
+  likes={blogPostData.likes} 
+  comments={blogPostData.comments?.length || 0}
+  postId={blogPostData._id}
+/>
+```
 
 API PATH CONFIGURATION:
 ─────────────────────────────────────────────────────────────────────────────
@@ -320,7 +355,7 @@ File: frontend/gist_hub/src/utils/apiPaths.js
 ```javascript
 export const API_PATHS = {
   POSTS: {
-    SEARCH: `/api/posts/search`,  // Search blog posts
+    LIKE_POST: (id) => `/api/posts/${id}/like`,  // Dynamic route
     // ... other endpoints
   }
 };
@@ -328,1165 +363,1618 @@ export const API_PATHS = {
 
 Usage:
 ```javascript
-import { API_PATHS } from "../../utils/apiPaths";
-
-const response = await axiosInstance.get(
-  API_PATHS.POSTS.SEARCH,
-  { params: { q: query } }
-);
-// Calls: GET /api/posts/search?q=react
+API_PATHS.POSTS.LIKE_POST("507f1f77bcf86cd799439011")
+// Returns: "/api/posts/507f1f77bcf86cd799439011/like"
 ```
 
 ================================================================================
-5. SEARCH BAR POPUP COMPONENT
+5. STATE MANAGEMENT
 ================================================================================
-
-FILE: SearchBarPopup.jsx
-─────────────────────────────────────────────────────────────────────────────
-Location: frontend/gist_hub/src/pages/Blog/components/SearchBarPopup.jsx
-
-COMPONENT STRUCTURE:
-```javascript
-import { LuSearch, LuSparkles, LuTrendingUp } from "react-icons/lu";
-import Modal from "../../../components/Modal";
-import { useNavigate } from "react-router-dom";
-
-const SearchBarPopup = ({ isOpen, setIsOpen }) => {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-
-  // ... handler functions
-}
-```
 
 STATE VARIABLES:
 ─────────────────────────────────────────────────────────────────────────────
 ```javascript
-const [query, setQuery] = useState("");
+const [postLikes, setPostLikes] = useState(likes || 0);
+const [liked, setLiked] = useState(false);
 ```
-• Stores user's search input
-• Cleared after search is performed
 
-HANDLER FUNCTIONS:
+STATE BREAKDOWN:
 ─────────────────────────────────────────────────────────────────────────────
-1. SEARCH HANDLER:
-```javascript
-const handleSearch = () => {
-  // Validate input
-  if (!query.trim()) return;
-  
-  // Clean the query
-  const searchQuery = query.trim();
-  
-  // Reset state
-  setQuery("");
-  setIsOpen(false);
-  
-  // Navigate to search results page
-  navigate(`/search?query=${searchQuery}`);
-};
-```
+1. **postLikes** (Number):
+   • Purpose: Tracks current like count
+   • Initial: props.likes or 0
+   • Updates: Increments on successful like
+   • Display: Shown next to like icon
 
-Steps:
-  1. Check if query is not empty (after trimming whitespace)
-  2. Trim whitespace from query
-  3. Clear the input field
-  4. Close the popup modal
-  5. Navigate to /search?query=trimmed-query
+2. **liked** (Boolean):
+   • Purpose: Controls animation state
+   • Initial: false
+   • Updates: true on click, false after 100ms
+   • Effect: Triggers bounce, sparkle, color changes
 
-2. KEYBOARD HANDLER:
-```javascript
-const handleKeyPress = (e) => {
-  if (e.key === "Enter") {
-    handleSearch();
-  }
-};
-```
-• Allows user to press Enter to search
-• Better UX than clicking button
-
-3. POPULAR SEARCH HANDLER:
-```javascript
-const popularSearches = [
-  "Technology", "Programming", "Design", "Health", "Education"
-];
-
-const handlePopularSearch = (term) => {
-  setQuery("");
-  setIsOpen(false);
-  navigate(`/search?query=${term}`);
-};
-```
-• Predefined popular search terms
-• One-click quick search
-• Improves discoverability
-
-UI STRUCTURE:
-─────────────────────────────────────────────────────────────────────────────
-```jsx
-<Modal isOpen={isOpen} onClose={() => setIsOpen(false)} hideHeader>
-  <div className="p-8">
-    {/* 1. Header with Icon and Title */}
-    <div className="text-center mb-8">
-      <div className="w-16 h-16 rounded-full bg-gradient...">
-        <LuSearch />
-      </div>
-      <h2>Search Articles</h2>
-      <p>Find your next great read</p>
-    </div>
-
-    {/* 2. Search Input with Gradient Border */}
-    <div className="relative mb-8">
-      <div className="gradient-border...">
-        <input
-          value={query}
-          onChange={({target}) => setQuery(target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Search for articles, topics, keywords..."
-          autoFocus
-        />
-        <button 
-          onClick={handleSearch}
-          disabled={!query.trim()}
-        >
-          Search
-        </button>
-      </div>
-    </div>
-
-    {/* 3. Popular Searches */}
-    <div className="space-y-4">
-      <div>
-        <LuTrendingUp /> Popular Searches
-      </div>
-      <div className="flex flex-wrap gap-3">
-        {popularSearches.map((term) => (
-          <button onClick={() => handlePopularSearch(term)}>
-            {term}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* 4. Search Tips */}
-    <div className="mt-8 p-4 bg-gradient...">
-      <p>Tip: Use specific keywords for more accurate results</p>
-    </div>
-  </div>
-</Modal>
-```
-
-DESIGN FEATURES:
-─────────────────────────────────────────────────────────────────────────────
-1. **Gradient Icon Badge**:
-   • 64px circular badge
-   • Purple-pink gradient background
-   • Search icon centered
-
-2. **Enhanced Input Field**:
-   • Gradient border with focus effect
-   • Search icon on left
-   • Large placeholder text
-   • Auto-focus on open
-   • Enter key support
-
-3. **Popular Searches**:
-   • Pill-shaped buttons
-   • Hover animations (scale + shadow)
-   • Quick one-click search
-   • Sparkle icons
-
-4. **Disabled State**:
-   • Search button disabled when input empty
-   • Visual feedback (opacity + cursor)
-   • Prevents empty searches
-
-5. **Tips Section**:
-   • Gradient background card
-   • Helpful search advice
-   • Professional look
-
-================================================================================
-6. SEARCH RESULTS PAGE COMPONENT
-================================================================================
-
-FILE: SearchPosts.jsx
-─────────────────────────────────────────────────────────────────────────────
-Location: frontend/gist_hub/src/pages/Blog/SearchPosts.jsx
-
-COMPONENT STRUCTURE:
-```javascript
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { LuSearch, LuFileText, LuSparkles } from "react-icons/lu";
-import BlogPostSummary from "./components/BlogPostSummary";
-import TrendingPostsSection from "./components/TrendingPostsSection";
-
-const SearchPosts = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const query = searchParams.get("query");
-
-  const [searchResults, setSearchResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // ... functions
-}
-```
-
-STATE VARIABLES:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-const [searchResults, setSearchResults] = useState([]);
-const [isLoading, setIsLoading] = useState(false);
-```
-
-State Breakdown:
-• searchResults: Array of blog post objects matching search query
-• isLoading: Boolean to show/hide loading skeletons
-
-URL PARAMETER EXTRACTION:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-const [searchParams] = useSearchParams();
-const query = searchParams.get("query");
-```
-
-How it works:
-• URL: /search?query=react hooks
-• searchParams.get("query") returns "react hooks"
-• Updates when URL changes
-• Reactive - triggers useEffect
-
-SEARCH FUNCTION:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-const handleSearch = async () => {
-  try {
-    // 1. Show loading state
-    setIsLoading(true);
-    
-    // 2. Make API request
-    const response = await axiosInstance.get(
-      API_PATHS.POSTS.SEARCH,
-      { params: { q: query } }  // Sends: ?q=react hooks
-    );
-    
-    // 3. Update results
-    if (response.data) {
-      setSearchResults(response.data || []);
-    }
-    
-  } catch (error) {
-    console.error("Error searching posts:", error);
-  } finally {
-    // 4. Hide loading state
-    setIsLoading(false);
-  }
-};
-```
-
-Execution Flow:
-1. Set loading to true → shows skeletons
-2. Call backend API with query parameter
-3. Receive array of matching posts
-4. Update searchResults state
-5. Set loading to false → hide skeletons, show results
-
-CLICK HANDLER:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-const handleClick = (post) => {
-  navigate(`/${post.slug}`);
-};
-```
-
-Usage:
-```javascript
-<div onClick={() => handleClick(item)}>
-  <BlogPostSummary {...item} />
-</div>
-```
-
-Important: Use arrow function to prevent immediate navigation
-❌ Wrong: onClick={handleClick(item)} - Calls immediately
-✓ Correct: onClick={() => handleClick(item)} - Calls on click
-
-USEEFFECT HOOK:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-useEffect(() => {
-  handleSearch();
-  return () => {};
-}, [query]);
-```
-
-Behavior:
-• Runs on component mount
-• Runs whenever 'query' changes
-• If user navigates from /search?query=react to /search?query=vue
-  → query changes from "react" to "vue"
-  → useEffect re-runs
-  → Fetches new results automatically
-
-================================================================================
-7. URL QUERY PARAMETERS
-================================================================================
-
-HOW QUERY PARAMETERS WORK:
-─────────────────────────────────────────────────────────────────────────────
-URL Structure:
-```
-/search?query=react hooks
-│      │      │
-│      │      └─ Parameter value
-│      └─ Parameter name
-└─ Route path
-```
-
-React Router Extraction:
-```javascript
-import { useSearchParams } from "react-router-dom";
-
-const [searchParams] = useSearchParams();
-const query = searchParams.get("query");  // "react hooks"
-```
-
-URL ENCODING:
-─────────────────────────────────────────────────────────────────────────────
-User Input: "react hooks" (with space)
-Navigate: navigate(`/search?query=${query}`)
-Actual URL: /search?query=react%20hooks (space becomes %20)
-
-Browser automatically:
-• Encodes special characters
-• Decodes when reading
-• searchParams.get("query") returns "react hooks" (decoded)
-
-MULTIPLE PARAMETERS (FUTURE):
-─────────────────────────────────────────────────────────────────────────────
-Could extend to:
-```javascript
-/search?query=react&tag=programming&sort=newest
-
-const query = searchParams.get("query");     // "react"
-const tag = searchParams.get("tag");         // "programming"
-const sort = searchParams.get("sort");       // "newest"
-```
-
-================================================================================
-8. STATE MANAGEMENT
-================================================================================
-
-COMPONENT STATE FLOW:
+STATE FLOW:
 ─────────────────────────────────────────────────────────────────────────────
 Initial State:
 ```
-searchResults: []
-isLoading: false
-query: "react" (from URL)
+postLikes: 42 (from props)
+liked: false
 ```
 
-User searches for "react":
+User Clicks Like:
 ```
-Step 1: setIsLoading(true)
-  → searchResults: []
-  → isLoading: true  ← Shows skeletons
+Step 1: handleLikeClick() called
 
-Step 2: API request sent
-  → Waiting for response...
+Step 2: Optimistic Update
+  setPostLikes(42 + 1) → postLikes: 43
+  setLiked(true)        → liked: true
+  
+Step 3: Visual Changes
+  • Like count changes from 42 to 43
+  • Icon bounces
+  • Sparkle animation appears
+  • Color changes to pink
 
-Step 3: Response received
-  → setSearchResults([{...}, {...}, {...}])
-  → searchResults: [3 posts]
-  → isLoading: true
-
-Step 4: setIsLoading(false)
-  → searchResults: [3 posts]
-  → isLoading: false  ← Shows actual posts
+Step 4: API Request Sent
+  POST /api/posts/:id/like
+  
+Step 5: Timer Starts
+  setTimeout(() => setLiked(false), 100)
+  
+Step 6: After 100ms
+  setLiked(false) → liked: false
+  
+Step 7: Visual Reset
+  • Bounce animation stops
+  • Sparkle disappears
+  • Colors reset
+  • Count remains 43
 ```
 
-CONDITIONAL RENDERING:
+OPTIMISTIC UI UPDATE:
+─────────────────────────────────────────────────────────────────────────────
+Why update UI before API response?
+
+Benefits:
+✓ Instant feedback (no waiting)
+✓ Better perceived performance
+✓ Smoother user experience
+✓ Modern app feel
+
+Pattern:
+```javascript
+// 1. Update UI immediately
+setPostLikes(prev => prev + 1);
+setLiked(true);
+
+// 2. Then send API request
+const response = await axiosInstance.post(...);
+
+// 3. If error, rollback (optional)
+if (!response.data) {
+  setPostLikes(prev => prev - 1);
+}
+```
+
+Current Implementation (No Rollback):
+• Assumes API call succeeds
+• Simple, fast UI
+• Trade-off: Potential inconsistency if API fails
+
+Better Implementation (With Error Handling):
+```javascript
+try {
+  setPostLikes(prev => prev + 1);
+  setLiked(true);
+  
+  const response = await axiosInstance.post(...);
+  
+  if (!response.data) {
+    // Rollback on failure
+    setPostLikes(prev => prev - 1);
+    setLiked(false);
+  }
+} catch (error) {
+  // Rollback on error
+  setPostLikes(prev => prev - 1);
+  setLiked(false);
+}
+```
+
+================================================================================
+6. LIKE FUNCTIONALITY LOGIC
+================================================================================
+
+HANDLELIKECLICK FUNCTION:
 ─────────────────────────────────────────────────────────────────────────────
 ```javascript
-{/* 1. Loading State */}
-{isLoading && <SkeletonCards />}
+const handleLikeClick = async () => {
+  // 1. Validation
+  if (!postId) return;
 
-{/* 2. Results Found */}
-{!isLoading && searchResults.length > 0 && (
-  <div>
-    {searchResults.map(item => <BlogPostSummary {...item} />)}
-  </div>
-)}
+  try {
+    // 2. Make API request
+    const response = await axiosInstance.post(
+      API_PATHS.POSTS.LIKE_POST(postId)
+    );
+    
+    // 3. Check response
+    if (response.data) {
+      // 4. Update like count (optimistic)
+      setPostLikes((prevState) => prevState + 1);
+      
+      // 5. Trigger animation
+      setLiked(true);
 
-{/* 3. No Results */}
-{!isLoading && searchResults.length === 0 && (
-  <EmptyState />
-)}
+      // 6. Reset animation after 100ms
+      setTimeout(() => {
+        setLiked(false);
+      }, 100);
+    }
+  } catch (error) {
+    // 7. Error handling
+    console.error("Error liking post:", error);
+  }
+};
 ```
 
-Three Distinct UI States:
-1. Loading (isLoading = true)
-2. Success with results (isLoading = false, searchResults.length > 0)
-3. No results (isLoading = false, searchResults.length = 0)
-
-STATE TRANSITIONS:
+STEP-BY-STEP BREAKDOWN:
 ─────────────────────────────────────────────────────────────────────────────
+**Step 1: Validation**
+```javascript
+if (!postId) return;
 ```
-[Mount] → Loading → Results Found
-                 └→ No Results
+• Prevents API call without valid post ID
+• Guards against undefined/null
+• Early return pattern
 
-[Query Change] → Loading → Results Found
-                        └→ No Results
+**Step 2: API Request**
+```javascript
+const response = await axiosInstance.post(
+  API_PATHS.POSTS.LIKE_POST(postId)
+);
 ```
+• Uses axios instance (has auth headers)
+• POST request to /api/posts/:id/like
+• Async/await for cleaner code
+• Automatically includes JWT token
+
+**Step 3: Response Check**
+```javascript
+if (response.data) {
+  // Success logic
+}
+```
+• Verifies response has data
+• Defensive programming
+• Prevents errors on empty responses
+
+**Step 4: Update Like Count**
+```javascript
+setPostLikes((prevState) => prevState + 1);
+```
+• Functional update pattern
+• Ensures correct value even with batching
+• prevState = current value at update time
+• Increments by 1
+
+Why Functional Update?
+```javascript
+// ❌ Direct update (can be stale)
+setPostLikes(postLikes + 1);
+
+// ✓ Functional update (always current)
+setPostLikes(prev => prev + 1);
+```
+
+**Step 5: Trigger Animation**
+```javascript
+setLiked(true);
+```
+• Sets animation flag
+• Triggers:
+  - Bounce animation
+  - Color change to pink
+  - Sparkle effect
+  - Scale increase
+
+**Step 6: Reset Animation**
+```javascript
+setTimeout(() => {
+  setLiked(false);
+}, 100);
+```
+• Brief animation duration (100ms)
+• Returns button to normal state
+• Allows re-triggering on next like
+• Non-blocking (async timer)
+
+**Step 7: Error Handling**
+```javascript
+catch (error) {
+  console.error("Error liking post:", error);
+}
+```
+• Catches network errors
+• Catches API errors (401, 500, etc.)
+• Logs for debugging
+• Doesn't crash app
+
+ERROR SCENARIOS:
+─────────────────────────────────────────────────────────────────────────────
+1. **Network Error**:
+   • User offline
+   • Server unreachable
+   • DNS failure
+   → Caught by catch block
+
+2. **Authentication Error** (401):
+   • Token expired
+   • Invalid token
+   • Not logged in
+   → API returns 401, caught by catch
+
+3. **Server Error** (500):
+   • Database connection failed
+   • MongoDB error
+   • Internal server error
+   → API returns 500, caught by catch
+
+4. **Invalid Post ID**:
+   • Post doesn't exist
+   • Malformed ObjectId
+   → MongoDB error, caught by catch
+
+AXIOS INSTANCE:
+─────────────────────────────────────────────────────────────────────────────
+File: frontend/gist_hub/src/utils/axioInstance.js
+
+```javascript
+import axios from 'axios';
+
+const axiosInstance = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add auth token to every request
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export default axiosInstance;
+```
+
+Benefits:
+• Centralized configuration
+• Auto-includes auth token
+• Consistent headers
+• Easy to modify globally
 
 ================================================================================
-9. UI/UX DESIGN FEATURES
+7. UI/UX DESIGN FEATURES
 ================================================================================
 
-HERO SECTION:
+FLOATING POSITION:
+─────────────────────────────────────────────────────────────────────────────
+```javascript
+<div className="fixed bottom-8 right-8 z-40">
+```
+
+CSS Breakdown:
+• **fixed**: Stays in position while scrolling
+• **bottom-8**: 32px from bottom edge (8 * 4px)
+• **right-8**: 32px from right edge
+• **z-40**: High z-index (above most content)
+
+Why Fixed Position?
+✓ Always accessible
+✓ No need to scroll back
+✓ Modern app pattern
+✓ Floating action button (FAB) design
+
+BUTTON CONTAINER STRUCTURE:
 ─────────────────────────────────────────────────────────────────────────────
 ```jsx
-<div className="relative overflow-hidden bg-white border-b">
-  {/* Gradient Background */}
-  <div className="absolute bg-linear-to-br from-purple-600/5..."></div>
+<div className="flex flex-col gap-4">
+  {/* Like Button */}
+  <div className="relative group">...</div>
   
-  {/* Floating Blur Effects */}
-  <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 
-    rounded-full blur-3xl"></div>
-  <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-500/10 
-    rounded-full blur-3xl"></div>
+  {/* Divider */}
+  <div className="relative flex items-center justify-center py-1">...</div>
+  
+  {/* Comment Button */}
+  <div className="relative group">...</div>
+</div>
+```
+
+Layout:
+• flex-col: Vertical stacking
+• gap-4: 16px spacing between items
+• relative group: Enables hover effects
+
+LIKE BUTTON STRUCTURE:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+<div className="relative group">
+  {/* 1. Glow Effect Layer */}
+  <div className="absolute -inset-1 bg-linear-to-r from-pink-600 
+    via-rose-500 to-purple-600 rounded-full opacity-0 
+    group-hover:opacity-75 blur-lg transition duration-500 
+    group-hover:duration-300 animate-pulse">
+  </div>
+  
+  {/* 2. Button Element */}
+  <button className="relative flex items-center gap-3 px-6 py-4 
+    bg-white backdrop-blur-xl rounded-full shadow-xl 
+    hover:shadow-2xl border-2 border-transparent 
+    hover:border-pink-200 transition-all duration-500 
+    hover:scale-110 overflow-hidden group">
+    
+    {/* 3. Background Gradient (Hidden, shows on hover) */}
+    <div className="absolute inset-0 bg-linear-to-r from-pink-50 
+      via-rose-50 to-purple-50 opacity-0 group-hover:opacity-100 
+      transition-opacity duration-300">
+    </div>
+    
+    {/* 4. Ripple Effect */}
+    <div className="absolute inset-0 rounded-full bg-pink-400 
+      opacity-0 group-hover:opacity-20 scale-0 
+      group-hover:scale-150 transition-all duration-700">
+    </div>
+    
+    {/* 5. Icon and Count */}
+    <div className="relative flex items-center gap-3">
+      {/* Icon with animations */}
+      {/* Like count */}
+    </div>
+    
+    {/* 6. Tooltip */}
+    <span className="absolute right-full mr-4 px-4 py-2 
+      bg-gray-900/95 backdrop-blur-sm text-white text-sm 
+      font-semibold rounded-xl opacity-0 group-hover:opacity-100 
+      transition-all duration-300 whitespace-nowrap shadow-2xl 
+      transform -translate-x-2 group-hover:translate-x-0">
+      ❤️ Like this post
+    </span>
+  </button>
+</div>
+```
+
+LAYER BREAKDOWN:
+─────────────────────────────────────────────────────────────────────────────
+Layer 1: **Glow Effect**
+• Position: absolute -inset-1 (extends 4px beyond button)
+• Gradient: Pink → Rose → Purple
+• Initially hidden: opacity-0
+• On hover: opacity-75 + blur-lg
+• Always animating: animate-pulse
+
+Layer 2: **Button Base**
+• White background
+• Rounded-full (perfect circle on sides)
+• Shadow-xl (large shadow)
+• On hover: shadow-2xl (extra large)
+• Border: transparent → pink-200 on hover
+• Scale: 1 → 1.1 (110%) on hover
+
+Layer 3: **Background Gradient**
+• Covers entire button (inset-0)
+• Subtle gradient: Pink-50 → Rose-50 → Purple-50
+• Hidden by default: opacity-0
+• Fades in on hover: opacity-100
+
+Layer 4: **Ripple Effect**
+• Circular shape
+• Starts small: scale-0
+• Expands on hover: scale-150
+• Pink color with low opacity
+• Slower animation: 700ms
+
+Layer 5: **Content (Icon + Count)**
+• Positioned relative (above other layers)
+• Flex layout with gap
+• Contains interactive elements
+
+Layer 6: **Tooltip**
+• Positioned to left of button (right-full)
+• Dark background with backdrop blur
+• Hidden by default
+• Slides in on hover (translate animation)
+• Arrow pointer
+
+DECORATIVE DIVIDER:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+<div className="relative flex items-center justify-center py-1">
+  {/* Gradient Line */}
+  <div className="h-px w-full bg-linear-to-r from-transparent 
+    via-purple-300 to-transparent">
+  </div>
+  
+  {/* Center Dot */}
+  <div className="absolute w-2 h-2 rounded-full bg-linear-to-r 
+    from-purple-400 to-pink-400 shadow-lg">
+  </div>
+</div>
+```
+
+Design:
+• Horizontal gradient line
+• Centered decorative dot
+• Separates like and comment buttons
+• Subtle, elegant visual break
+
+================================================================================
+8. ADVANCED VISUAL EFFECTS
+================================================================================
+
+ICON ANIMATIONS:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+<div className={clsx(
+  "relative transition-all duration-300",
+  liked && "animate-bounce"  // Bounce when liked
+)}>
+  <PiHandsClapping
+    className={clsx(
+      "text-3xl transition-all duration-500",
+      liked
+        ? "text-pink-500 scale-125 drop-shadow-lg"  // When liked
+        : "text-gray-600 group-hover:text-pink-500 group-hover:scale-110"  // Default/hover
+    )}
+  />
+</div>
+```
+
+State-Based Styling with clsx:
+• **Not Liked** (default):
+  - text-gray-600 (dark gray)
+  - No scale
+  - On hover: text-pink-500, scale-110
+
+• **Liked** (after click):
+  - text-pink-500 (pink color)
+  - scale-125 (25% larger)
+  - drop-shadow-lg (shadow effect)
+  - animate-bounce (Tailwind bounce)
+
+SPARKLE EFFECT:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+{liked && (
+  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+    {/* Expanding ring */}
+    <span className="animate-ping absolute inline-flex h-full w-full 
+      rounded-full bg-pink-400 opacity-75">
+    </span>
+    
+    {/* Static dot */}
+    <span className="relative inline-flex rounded-full h-3 w-3 
+      bg-pink-500">
+    </span>
+  </span>
+)}
+```
+
+Two-Layer Sparkle:
+1. **Outer Ring** (animate-ping):
+   • Scales up and fades out
+   • Creates pulsing effect
+   • Continuous animation
+
+2. **Inner Dot**:
+   • Solid pink circle
+   • Stays in place
+   • Visual anchor
+
+Only shows when liked = true
+
+HOVER SCALE EFFECT:
+─────────────────────────────────────────────────────────────────────────────
+```css
+transition-all duration-500 hover:scale-110
+```
+
+Behavior:
+• Normal: scale(1) - 100% size
+• Hover: scale(1.1) - 110% size
+• Smooth transition: 500ms
+• Creates "pop out" effect
+
+TOOLTIP SLIDE ANIMATION:
+─────────────────────────────────────────────────────────────────────────────
+```css
+transform -translate-x-2 group-hover:translate-x-0
+opacity-0 group-hover:opacity-100
+```
+
+Animation Sequence:
+1. **Initial State**:
+   - opacity: 0 (invisible)
+   - translateX: -8px (shifted left)
+
+2. **On Hover**:
+   - opacity: 100 (visible)
+   - translateX: 0 (normal position)
+   - Duration: 300ms
+
+Effect: Tooltip slides in from left while fading in
+
+COMMENT ICON ROTATION:
+─────────────────────────────────────────────────────────────────────────────
+```css
+group-hover:rotate-12
+```
+
+• Rotates 12 degrees clockwise on hover
+• Playful, interactive feel
+• Smooth transition
+
+NOTIFICATION BADGE:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+{comments > 0 && (
+  <span className="absolute -top-2 -right-2 flex items-center 
+    justify-center w-5 h-5 bg-linear-to-r from-sky-500 to-blue-500 
+    text-white text-xs font-bold rounded-full shadow-lg">
+    {comments > 99 ? "99+" : comments}
+  </span>
+)}
+```
+
+Features:
+• Only shows if comments > 0
+• Positioned top-right of icon
+• Caps at 99+
+• Gradient background
+• Small, circular badge
+
+RIPPLE EFFECT DETAILS:
+─────────────────────────────────────────────────────────────────────────────
+```css
+scale-0 group-hover:scale-150
+opacity-0 group-hover:opacity-20
+transition-all duration-700
+```
+
+Animation:
+1. Starts invisible and tiny (scale-0, opacity-0)
+2. On hover, expands to 150% and becomes slightly visible
+3. Slow animation (700ms) for smooth ripple
+4. Creates water ripple effect
+
+BACKDROP BLUR (Glass Morphism):
+─────────────────────────────────────────────────────────────────────────────
+```css
+backdrop-blur-xl
+```
+
+• Blurs content behind button
+• Modern, frosted glass effect
+• Enhances depth perception
+• Premium UI feel
+
+================================================================================
+9. TOOLTIP IMPLEMENTATION
+================================================================================
+
+TOOLTIP STRUCTURE:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+<span className="absolute right-full mr-4 px-4 py-2 
+  bg-gray-900/95 backdrop-blur-sm text-white text-sm 
+  font-semibold rounded-xl opacity-0 group-hover:opacity-100 
+  transition-all duration-300 whitespace-nowrap shadow-2xl 
+  transform -translate-x-2 group-hover:translate-x-0">
   
   {/* Content */}
-  <div className="relative max-w-7xl mx-auto px-6 py-16">
-    {/* Search Icon Badge */}
-    <div className="w-20 h-20 rounded-full bg-gradient...">
-      <LuSearch />
-    </div>
-    
-    {/* Title */}
-    <h1 className="text-4xl md:text-5xl font-bold">
-      Search Results
-    </h1>
-    
-    {/* Query Display */}
-    <div className="inline-flex items-center gap-3 px-6 py-3 
-      bg-white rounded-full border-2 border-purple-200 shadow-lg">
-      <LuSparkles />
-      <span>Showing results for</span>
-      <span className="font-bold gradient-text">"{query}"</span>
-    </div>
-    
-    {/* Results Count */}
-    <p>
-      Found <span className="font-bold">{searchResults.length}</span> 
-      {searchResults.length === 1 ? 'article' : 'articles'}
-    </p>
-  </div>
-</div>
+  <span className="flex items-center gap-2">
+    ❤️ Like this post
+  </span>
+  
+  {/* Arrow */}
+  <span className="absolute right-0 top-1/2 -translate-y-1/2 
+    translate-x-full w-0 h-0 border-8 border-transparent 
+    border-l-gray-900/95">
+  </span>
+</span>
 ```
 
-Design Elements:
-• Layered gradient backgrounds
-• Floating blur orbs for depth
-• Icon badge with gradient
-• Query display in pill badge
-• Dynamic result count
-• Singular/plural article text
+POSITIONING:
+─────────────────────────────────────────────────────────────────────────────
+```css
+absolute right-full mr-4
+```
 
-GRID LAYOUT:
+Explanation:
+• absolute: Removed from normal flow
+• right-full: Positioned at 100% from right (left side of button)
+• mr-4: 16px margin to right (gap from button)
+
+Result: Tooltip appears to left of button
+
+ARROW IMPLEMENTATION:
+─────────────────────────────────────────────────────────────────────────────
+```css
+w-0 h-0 
+border-8 border-transparent 
+border-l-gray-900/95
+```
+
+CSS Triangle Trick:
+• Width and height = 0
+• Borders create the shape
+• Only left border colored
+• Creates arrow pointing right
+
+Positioning:
+```css
+absolute right-0 top-1/2 -translate-y-1/2 translate-x-full
+```
+
+• right-0: At right edge of tooltip
+• top-1/2: Vertically centered
+• -translate-y-1/2: Adjust to true center
+• translate-x-full: Move arrow outside (right of tooltip)
+
+DYNAMIC CONTENT:
+─────────────────────────────────────────────────────────────────────────────
+Like Tooltip:
+```jsx
+❤️ Like this post
+```
+
+Comment Tooltip:
+```jsx
+💬 View {comments} comment{comments !== 1 ? 's' : ''}
+```
+
+Features:
+• Dynamic count
+• Singular/plural handling
+• Emoji for visual interest
+
+TOOLTIP VISIBILITY:
+─────────────────────────────────────────────────────────────────────────────
+```css
+opacity-0 group-hover:opacity-100
+```
+
+• Hidden by default
+• Fades in on button hover
+• Clean, unobtrusive
+
+WHITESPACE HANDLING:
+─────────────────────────────────────────────────────────────────────────────
+```css
+whitespace-nowrap
+```
+
+• Prevents text wrapping
+• Keeps tooltip on single line
+• Consistent size
+
+================================================================================
+10. ANIMATION DETAILS
+================================================================================
+
+FLOATING ANIMATION:
 ─────────────────────────────────────────────────────────────────────────────
 ```jsx
-<div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-  {/* Results Section - 2/3 width */}
-  <div className="lg:col-span-2">
-    {/* Search results here */}
-  </div>
-
-  {/* Sidebar - 1/3 width */}
-  <div className="lg:col-span-1">
-    <div className="sticky top-24">
-      <TrendingPostsSection />
-      <SearchTipsCard />
-    </div>
-  </div>
-</div>
-```
-
-Responsive:
-• Mobile: Single column, stacked
-• Desktop: 2/3 + 1/3 split
-• Sidebar sticky on scroll
-
-STAGGERED ANIMATIONS:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-{searchResults.map((item, index) => (
-  <div
-    key={item._id}
-    style={{
-      animationDelay: `${index * 100}ms`,
-      animation: "fadeInUp 0.6s ease-out forwards",
-      opacity: 0,
-    }}
-  >
-    <BlogPostSummary {...item} />
-  </div>
-))}
-```
-
-CSS:
-```css
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
+<style jsx>{`
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
   }
-  to {
-    opacity: 1;
+  .group:hover {
+    animation: float 3s ease-in-out infinite;
+  }
+`}</style>
+```
+
+Keyframes:
+• 0%: Normal position (translateY: 0)
+• 50%: Moved up 10px (translateY: -10px)
+• 100%: Back to normal
+
+Animation Properties:
+• Duration: 3 seconds
+• Timing: ease-in-out (smooth acceleration/deceleration)
+• Iteration: infinite (loops forever)
+• Trigger: On hover
+
+Effect: Gentle up-down floating motion
+
+BOUNCE ANIMATION (Tailwind):
+─────────────────────────────────────────────────────────────────────────────
+```css
+animate-bounce
+```
+
+Built-in Tailwind animation:
+```css
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
     transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
 }
 ```
 
-Effect:
-• Each post fades in sequentially
-• 100ms delay between each
-• Slides up from 30px below
-• Professional loading experience
+Applied when: liked = true
 
-SECTION HEADER:
+PING ANIMATION (Tailwind):
 ─────────────────────────────────────────────────────────────────────────────
-```jsx
-<div className="flex items-center gap-3 pb-4 border-b-2 
-  border-linear-to-r from-purple-200 to-pink-200">
-  <div className="w-8 h-8 rounded-lg bg-linear-to-br 
-    from-purple-600 to-pink-600 flex items-center justify-center">
-    <LuFileText className="text-white text-sm" />
-  </div>
-  <h2 className="text-2xl font-bold">All Results</h2>
-</div>
+```css
+animate-ping
 ```
 
-Features:
-• Gradient icon badge
-• Gradient bottom border
-• Professional typography
-
-================================================================================
-10. LOADING & EMPTY STATES
-================================================================================
-
-LOADING SKELETONS:
-─────────────────────────────────────────────────────────────────────────────
-```jsx
-{isLoading && (
-  <div className="space-y-6">
-    {[1, 2, 3].map((i) => (
-      <div key={i} className="bg-white rounded-2xl p-6 border 
-        border-gray-200 animate-pulse">
-        {/* Image Placeholder */}
-        <div className="h-48 bg-gray-200 rounded-xl mb-4"></div>
-        
-        {/* Title Placeholder */}
-        <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
-        
-        {/* Description Lines */}
-        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-      </div>
-    ))}
-  </div>
-)}
+Built-in Tailwind animation:
+```css
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
 ```
 
-Design Decisions:
-• Shows 3 skeleton cards
-• Mimics actual BlogPostSummary structure
-• Tailwind's animate-pulse for shimmer
-• Maintains layout consistency
+Effect: Expanding circle that fades out
 
-EMPTY STATE:
+PULSE ANIMATION (Tailwind):
 ─────────────────────────────────────────────────────────────────────────────
-```jsx
-{!isLoading && searchResults.length === 0 && (
-  <div className="text-center py-20">
-    <div className="max-w-md mx-auto">
-      {/* Icon */}
-      <div className="w-24 h-24 mx-auto mb-6 rounded-full 
-        bg-linear-to-br from-purple-100 to-pink-100 
-        flex items-center justify-center">
-        <LuSearch className="text-purple-400 text-4xl" />
-      </div>
-
-      {/* Heading */}
-      <h3 className="text-2xl font-bold text-gray-900 mb-3">
-        No results found
-      </h3>
-
-      {/* Message */}
-      <p className="text-gray-600 mb-8">
-        We couldn't find any posts matching
-        <span className="font-bold text-purple-600"> "{query}"</span>.
-        <br />
-        Try different keywords or browse all posts!
-      </p>
-
-      {/* CTA Button */}
-      <button
-        onClick={() => navigate("/blog")}
-        className="inline-flex items-center gap-2 px-6 py-3 
-          bg-linear-to-r from-purple-600 to-pink-600 text-white 
-          rounded-xl shadow-lg hover:shadow-xl hover:scale-105 
-          transition-all duration-300 font-semibold"
-      >
-        <LuFileText />
-        <span>Browse All Posts</span>
-      </button>
-    </div>
-  </div>
-)}
+```css
+animate-pulse
 ```
 
-Empty State Principles:
-1. Large gradient icon for visual interest
-2. Clear message explaining why no results
-3. Shows the actual search query
-4. Helpful suggestions
-5. Call-to-action button to browse all posts
-6. Friendly, encouraging tone
-
-SIDEBAR COMPONENTS:
-─────────────────────────────────────────────────────────────────────────────
-```jsx
-{/* Trending Posts */}
-<div className="relative group">
-  <div className="absolute -inset-0.5 bg-linear-to-r 
-    from-purple-600 to-pink-600 rounded-2xl opacity-20 
-    group-hover:opacity-30 blur transition duration-500"></div>
-  <div className="relative bg-white rounded-2xl p-6 shadow-lg 
-    border border-purple-100">
-    <TrendingPostsSection />
-  </div>
-</div>
-
-{/* Search Tips */}
-<div className="bg-linear-to-br from-purple-50 to-pink-50 
-  rounded-2xl p-6 border border-purple-100">
-  <h3 className="font-bold text-gray-900 mb-3 
-    flex items-center gap-2">
-    <LuSparkles className="text-purple-600" />
-    Search Tips
-  </h3>
-  <ul className="space-y-2 text-sm text-gray-600">
-    <li>• Use specific keywords for better results</li>
-    <li>• Try different word variations</li>
-    <li>• Browse by tags for related content</li>
-  </ul>
-</div>
+Built-in Tailwind animation:
+```css
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 ```
 
-Features:
-• Gradient glow effect on hover
-• Sticky positioning
-• Helpful search tips
-• Consistent purple-pink theme
+Applied to: Glow effect layer
+Effect: Breathing opacity change
 
-================================================================================
-11. SEARCH ALGORITHM
-================================================================================
-
-MONGODB REGEX SEARCH:
+TRANSITION DURATIONS:
 ─────────────────────────────────────────────────────────────────────────────
-Query Structure:
+| Element              | Duration | Purpose                    |
+|---------------------|----------|----------------------------|
+| Button scale        | 500ms    | Smooth hover grow          |
+| Glow effect         | 500ms    | Gradual glow appearance    |
+| Ripple effect       | 700ms    | Slow expanding wave        |
+| Background gradient | 300ms    | Quick color fade           |
+| Tooltip             | 300ms    | Fast slide-in              |
+| Icon scale          | 500ms    | Smooth size change         |
+| Color change        | 300ms    | Quick color transition     |
+
+Design Philosophy:
+• Faster for instant feedback (300ms)
+• Slower for visual interest (500-700ms)
+• Never too slow (max 700ms)
+
+ANIMATION RESET TIMER:
+─────────────────────────────────────────────────────────────────────────────
 ```javascript
-BlogPost.find({
-  isDraft: false,
-  $or: [
-    { title: { $regex: query, $options: "i" } },
-    { content: { $regex: query, $options: "i" } }
-  ]
-})
+setTimeout(() => {
+  setLiked(false);
+}, 100);
 ```
 
-HOW IT WORKS:
-─────────────────────────────────────────────────────────────────────────────
-Example: User searches "react hooks"
+Purpose:
+• Resets animation state after 100ms
+• Allows re-triggering on next click
+• Brief enough to see animation
+• Long enough to register visually
 
-MongoDB creates regex pattern: /react hooks/i
-
-Checks each post:
-1. Post 1:
-   - Title: "Introduction to React Hooks" ✓ MATCH
-   - Content: "React hooks are amazing..."
-   → INCLUDED in results
-
-2. Post 2:
-   - Title: "Vue Composition API" ✗ No match
-   - Content: "Vue 3 introduces..." ✗ No match
-   → EXCLUDED from results
-
-3. Post 3:
-   - Title: "Advanced JavaScript" ✗ No match
-   - Content: "...using react hooks for state..." ✓ MATCH
-   → INCLUDED in results
-
-REGEX OPTIONS:
-─────────────────────────────────────────────────────────────────────────────
-$options: "i" - Case Insensitive
-
-Examples:
-• "React" matches "react", "REACT", "ReAcT"
-• "Hooks" matches "hooks", "HOOKS", "HoOkS"
-
-Without "i":
-• "React" only matches "React" (exact case)
-
-SEARCH LIMITATIONS:
-─────────────────────────────────────────────────────────────────────────────
-Current Implementation:
-✓ Simple keyword matching
-✓ Case-insensitive
-✓ Searches title and content
-✓ Fast for small datasets
-
-Limitations:
-✗ No partial word matching ("react" won't match "reactive")
-✗ No fuzzy matching (typo tolerance)
-✗ No relevance scoring
-✗ Slow for large datasets (no indexing)
-
-PERFORMANCE:
-─────────────────────────────────────────────────────────────────────────────
-For < 1,000 posts: Fast
-For > 10,000 posts: Consider full-text search
-
-MongoDB regex scans:
-• Every published post
-• Title field completely
-• Content field completely
-
-For better performance, see "Future Enhancements" section.
+Why 100ms?
+• Human perception threshold: ~50-100ms
+• Feels instant but noticeable
+• Prevents animation overlap
 
 ================================================================================
-12. PERFORMANCE CONSIDERATIONS
+11. ACCESSIBILITY FEATURES
+================================================================================
+
+SEMANTIC HTML:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+<button onClick={handleLikeClick}>
+  {/* Content */}
+</button>
+```
+
+• Uses <button> element (not <div>)
+• Keyboard accessible (Tab, Enter, Space)
+• Screen reader friendly
+• Proper ARIA semantics
+
+KEYBOARD NAVIGATION:
+─────────────────────────────────────────────────────────────────────────────
+Works out of box:
+• Tab: Focus button
+• Enter: Click button
+• Space: Click button
+
+FOCUS STATES:
+─────────────────────────────────────────────────────────────────────────────
+```css
+border-2 border-transparent hover:border-pink-200
+```
+
+• Visible border on hover
+• Helps keyboard users see focus
+• High contrast
+
+TOOLTIPS AS LABELS:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+❤️ Like this post
+💬 View {comments} comments
+```
+
+• Descriptive text
+• Clear action indication
+• Helps all users understand purpose
+
+RECOMMENDED IMPROVEMENTS:
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+<button
+  onClick={handleLikeClick}
+  aria-label="Like this post"
+  aria-pressed={liked}
+>
+```
+
+• aria-label: Screen reader announcement
+• aria-pressed: Toggle state for assistive tech
+
+COLOR CONTRAST:
+─────────────────────────────────────────────────────────────────────────────
+• Gray 600 icons: High contrast on white
+• Pink 500: Sufficient contrast
+• White text on dark tooltip: Excellent contrast
+
+TOUCH TARGETS:
+─────────────────────────────────────────────────────────────────────────────
+```css
+px-6 py-4
+```
+
+• 24px vertical padding
+• 48px horizontal padding
+• Total height: ~56px (48px minimum recommended)
+• Easy to tap on mobile
+
+================================================================================
+12. PERFORMANCE OPTIMIZATIONS
 ================================================================================
 
 CURRENT OPTIMIZATIONS:
 ─────────────────────────────────────────────────────────────────────────────
-1. **Immediate Loading State**:
+1. **Functional State Updates**:
 ```javascript
-setIsLoading(true);  // Before API call
+setPostLikes(prev => prev + 1);
 ```
-• Shows skeletons immediately
-• User sees instant feedback
+• Prevents stale state
+• Works with React batching
+• Ensures correct increments
+
+2. **Event Handler Memoization** (Potential):
+```javascript
+const handleLikeClick = useCallback(async () => {
+  // Logic
+}, [postId]);
+```
+• Prevents re-creation on every render
+• Reduces memory allocation
+• Better for child components
+
+3. **Optimistic Updates**:
+• UI updates immediately
+• No waiting for API
 • Better perceived performance
 
-2. **Selective Field Population**:
-```javascript
-.populate("author", "name profileImageUrl")
+4. **CSS Transforms** (GPU Accelerated):
+```css
+transform: scale(1.1);
+transform: translateY(-10px);
 ```
-• Only fetches needed author fields
-• Reduces payload size
-• Faster response
+• Uses GPU for animations
+• Smoother than changing width/height
+• Better FPS
 
-3. **Client-Side Caching** (Browser):
-• Axios caches GET requests
-• Same search query = instant results
-• No redundant API calls
-
-4. **Conditional Rendering**:
-```javascript
-{isLoading && <Skeletons />}
-{!isLoading && searchResults.length > 0 && <Results />}
-{!isLoading && searchResults.length === 0 && <EmptyState />}
+5. **Conditional Rendering**:
+```jsx
+{liked && <SparkleEffect />}
+{comments > 0 && <Badge />}
 ```
-• Only renders one state at a time
+• Only renders when needed
 • Reduces DOM size
-• Faster re-renders
+• Less memory usage
+
+POTENTIAL IMPROVEMENTS:
+─────────────────────────────────────────────────────────────────────────────
+1. **Debounce Multiple Clicks**:
+```javascript
+const [isLiking, setIsLiking] = useState(false);
+
+const handleLikeClick = async () => {
+  if (isLiking) return;  // Prevent spam
+  setIsLiking(true);
+  
+  // ... like logic
+  
+  setIsLiking(false);
+};
+```
+
+2. **Request Cancellation**:
+```javascript
+const abortController = new AbortController();
+
+axiosInstance.post(url, { signal: abortController.signal });
+
+// On unmount:
+return () => abortController.abort();
+```
+
+3. **CSS Containment**:
+```css
+contain: layout style paint;
+```
+• Isolates rendering
+• Improves paint performance
+
+4. **Will-Change Hint**:
+```css
+will-change: transform, opacity;
+```
+• Tells browser to optimize
+• Creates composite layer
+• Smoother animations
+
+ANIMATION PERFORMANCE:
+─────────────────────────────────────────────────────────────────────────────
+✓ Using transforms (not positions)
+✓ Using opacity (not display)
+✓ GPU-accelerated properties
+✗ Could add will-change
+✗ Could reduce animation count
 
 NETWORK OPTIMIZATION:
 ─────────────────────────────────────────────────────────────────────────────
-• Minimal API payload
-• Only published posts returned
-• Sorted at database level
-• No unnecessary joins
-
-RECOMMENDED IMPROVEMENTS:
-─────────────────────────────────────────────────────────────────────────────
-1. **Debouncing** (for live search):
-```javascript
-const debouncedSearch = useCallback(
-  debounce(() => handleSearch(), 300),
-  [query]
-);
-```
-
-2. **Pagination**:
-```javascript
-const [page, setPage] = useState(1);
-const [hasMore, setHasMore] = useState(true);
-
-// Backend: ?q=react&page=1&limit=10
-```
-
-3. **MongoDB Text Index**:
-```javascript
-// In BlogPost schema:
-blogPostSchema.index({ title: "text", content: "text" });
-
-// Better search:
-BlogPost.find({ $text: { $search: query } })
-  .sort({ score: { $meta: "textScore" } });
-```
-
-4. **Caching with Redis**:
-```javascript
-// Cache search results for 5 minutes
-const cacheKey = `search:${query}`;
-const cached = await redis.get(cacheKey);
-if (cached) return JSON.parse(cached);
-
-// If not cached, query DB and cache
-const results = await BlogPost.find(...);
-await redis.setex(cacheKey, 300, JSON.stringify(results));
-```
-
-5. **Elasticsearch Integration**:
-• Full-text search engine
-• Fuzzy matching
-• Typo tolerance
-• Relevance scoring
-• Lightning fast
+• Single API call per like
+• Small payload
+• No unnecessary data transferred
+• Axios interceptor handles auth automatically
 
 ================================================================================
-13. USER EXPERIENCE ENHANCEMENTS
+13. INTEGRATION WITH BLOG POST
 ================================================================================
 
-FEATURES IMPLEMENTED:
+PARENT COMPONENT USAGE:
 ─────────────────────────────────────────────────────────────────────────────
-1. **Auto-Focus Search Input**:
-```javascript
-<input autoFocus />
-```
-• User can start typing immediately
-• No need to click input field
+File: BlogpostView.jsx
 
-2. **Enter Key Support**:
-```javascript
-const handleKeyPress = (e) => {
-  if (e.key === "Enter") handleSearch();
+```jsx
+import LikeCommentButton from './components/LikeCommentButton';
+
+const BlogpostView = () => {
+  const [blogPostData, setBlogPostData] = useState(null);
+  
+  // ... fetch blog post data
+  
+  return (
+    <div>
+      {/* Blog post content */}
+      
+      <LikeCommentButton
+        likes={blogPostData.likes}
+        comments={blogPostData.comments?.length || 0}
+        postId={blogPostData._id}
+      />
+    </div>
+  );
 };
 ```
-• Faster search workflow
-• Natural typing behavior
 
-3. **Popular Searches**:
-```javascript
-const popularSearches = ["Technology", "Programming", ...];
-```
-• Quick discovery
-• One-click search
-• Reduces friction
-
-4. **Input Validation**:
-```javascript
-if (!query.trim()) return;
-```
-• Prevents empty searches
-• Trims whitespace
-• Better data quality
-
-5. **Disabled Button State**:
-```javascript
-<button disabled={!query.trim()}>
-```
-• Visual feedback
-• Prevents invalid actions
-• Professional UX
-
-6. **Results Count**:
-```javascript
-Found {searchResults.length} {searchResults.length === 1 ? 'article' : 'articles'}
-```
-• Shows search effectiveness
-• Proper singular/plural
-• Transparency
-
-7. **Staggered Animations**:
-• Posts fade in sequentially
-• Professional feel
-• Delightful experience
-
-8. **Empty State with CTA**:
-• Clear message
-• Shows search query
-• Helpful suggestions
-• Browse all posts button
-
-9. **Loading Skeletons**:
-• Better than spinners
-• Shows expected layout
-• Reduces perceived wait time
-
-10. **Responsive Design**:
-• Mobile-first approach
-• Grid layout adapts
-• Touch-friendly buttons
-
-ACCESSIBILITY:
+DATA FLOW:
 ─────────────────────────────────────────────────────────────────────────────
-• Large touch targets (44px minimum)
-• High contrast text
-• Keyboard navigation support
-• Focus states on inputs
-• Semantic HTML
+BlogpostView fetches post:
+```javascript
+const response = await axiosInstance.get(`/api/posts/slug/${slug}`);
+setBlogPostData(response.data);
+```
 
-================================================================================
-14. INTEGRATION FLOW
-================================================================================
+Post data includes:
+```javascript
+{
+  _id: "507f1f77bcf86cd799439011",
+  title: "...",
+  content: "...",
+  likes: 42,
+  comments: [
+    { _id: "...", content: "...", ... },
+    { _id: "...", content: "...", ... }
+  ]
+}
+```
 
-COMPLETE USER JOURNEY:
-─────────────────────────────────────────────────────────────────────────────
-Step 1: User on Blog Page
-  ↓
-Step 2: Clicks Search Icon in Navbar
-  ↓
-Step 3: SearchBarPopup Opens (Modal)
-  • isOpen = true
-  • Input auto-focused
-  ↓
-Step 4: User Types "react hooks"
-  • query state updates
-  ↓
-Step 5: User Presses Enter (or clicks Search)
-  • handleSearch() called
-  • Validates query.trim()
-  • navigate(`/search?query=react hooks`)
-  • Modal closes
-  ↓
-Step 6: React Router Navigates
-  • URL changes to /search?query=react%20hooks
-  • SearchPosts component mounts
-  ↓
-Step 7: SearchPosts Extracts Query
-  • const query = searchParams.get("query")
-  • query = "react hooks"
-  ↓
-Step 8: useEffect Triggers
-  • Detects query dependency
-  • Calls handleSearch()
-  ↓
-Step 9: Loading State Starts
-  • setIsLoading(true)
-  • Skeleton cards appear
-  ↓
-Step 10: API Request Sent
-  • GET /api/posts/search?q=react hooks
-  • Backend receives request
-  ↓
-Step 11: Database Query
-  • MongoDB regex search
-  • Finds matching posts
-  • Populates author data
-  • Sorts by date
-  ↓
-Step 12: Response Received
-  • Frontend gets array of posts
-  • setSearchResults([...posts])
-  • setIsLoading(false)
-  ↓
-Step 13: UI Updates
-  • Skeletons disappear
-  • Posts fade in with animation
-  • Shows result count
-  ↓
-Step 14: User Clicks a Post
-  • handleClick(post) called
-  • navigate(`/${post.slug}`)
-  • BlogpostView page opens
+Props passed:
+```javascript
+likes={42}
+comments={2}  // comments.length
+postId={"507f1f77bcf86cd799439011"}
+```
 
 COMPONENT LIFECYCLE:
 ─────────────────────────────────────────────────────────────────────────────
-```
-Mount → Extract Query → Fetch Results → Render
-  ↓         ↓              ↓              ↓
-  ✓      query="react"   API call     Display posts
-  
-Query Change:
-  ↓
-Re-run useEffect → Fetch New Results → Update UI
+1. BlogpostView mounts
+2. Fetches post data
+3. Renders LikeCommentButton with props
+4. LikeCommentButton initializes state:
+   - postLikes = 42
+   - liked = false
+5. User clicks like
+6. LikeCommentButton increments count (43)
+7. API updates database
+8. BlogpostView data unchanged (still shows 42)
+9. On page refresh, shows updated count (43)
+
+STATE SYNCHRONIZATION:
+─────────────────────────────────────────────────────────────────────────────
+Current: Local state only
+• LikeCommentButton manages own state
+• Parent (BlogpostView) not updated
+• Refresh required to see persisted count
+
+Better Approach:
+```javascript
+// In BlogpostView
+const handleLikeUpdate = (newCount) => {
+  setBlogPostData(prev => ({
+    ...prev,
+    likes: newCount
+  }));
+};
+
+<LikeCommentButton
+  likes={blogPostData.likes}
+  onLikeUpdate={handleLikeUpdate}
+  {...otherProps}
+/>
+
+// In LikeCommentButton
+const handleLikeClick = async () => {
+  // ...
+  const newCount = postLikes + 1;
+  setPostLikes(newCount);
+  onLikeUpdate?.(newCount);  // Update parent
+};
 ```
 
-STATE TIMELINE:
+POSITIONING CONTEXT:
+─────────────────────────────────────────────────────────────────────────────
+```css
+fixed bottom-8 right-8
+```
+
+• Fixed to viewport, not parent
+• Always visible while scrolling post
+• Overlays all content
+• Independent of BlogpostView layout
+
+Z-INDEX STACK:
 ─────────────────────────────────────────────────────────────────────────────
 ```
-Time: 0ms
-  searchResults: []
-  isLoading: false
-  query: "react"
-
-Time: 10ms (useEffect triggers)
-  handleSearch() called
-
-Time: 20ms
-  isLoading: true ← Skeletons show
-
-Time: 150ms
-  API request sent
-
-Time: 350ms
-  Response received
-  searchResults: [{...}, {...}, {...}]
-
-Time: 360ms
-  isLoading: false ← Posts show with animation
-
-Time: 360-960ms
-  Posts fade in sequentially (100ms delay each)
+z-50  : Navbar (highest)
+z-40  : LikeCommentButton
+z-30  : Modals
+z-20  : Dropdowns
+z-10  : Sticky elements
+z-0   : Normal content (lowest)
 ```
 
 ================================================================================
-15. FUTURE ENHANCEMENTS
+14. FUTURE ENHANCEMENTS
 ================================================================================
 
 PLANNED FEATURES:
 ─────────────────────────────────────────────────────────────────────────────
-1. **Advanced Search**:
-   • Filter by author
-   • Filter by date range
-   • Filter by tags
-   • Combine filters (AND/OR logic)
-   
-   ```javascript
-   /search?query=react&author=john&tag=programming&from=2025-01-01
-   ```
+1. **Unlike Functionality**:
+```javascript
+const [hasLiked, setHasLiked] = useState(false);
 
-2. **Search Suggestions** (Autocomplete):
-   • As-you-type suggestions
-   • Recent searches
-   • Popular searches
-   • Tag suggestions
-   
-   ```javascript
-   const [suggestions, setSuggestions] = useState([]);
-   
-   useEffect(() => {
-     if (query.length > 2) {
-       fetchSuggestions(query);
-     }
-   }, [query]);
-   ```
+const handleLikeClick = async () => {
+  if (hasLiked) {
+    // Unlike
+    setPostLikes(prev => prev - 1);
+    setHasLiked(false);
+    await axiosInstance.delete(API_PATHS.POSTS.UNLIKE(postId));
+  } else {
+    // Like
+    setPostLikes(prev => prev + 1);
+    setHasLiked(true);
+    await axiosInstance.post(API_PATHS.POSTS.LIKE(postId));
+  }
+};
+```
 
-3. **Search History**:
-   • Save user's recent searches
-   • Quick re-search
-   • Clear history option
-   • LocalStorage persistence
-   
-   ```javascript
-   const [searchHistory, setSearchHistory] = useState([]);
-   
-   useEffect(() => {
-     const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-     setSearchHistory(history);
-   }, []);
-   ```
+2. **Like Persistence** (Check if user already liked):
+```javascript
+useEffect(() => {
+  const checkIfLiked = async () => {
+    const response = await axiosInstance.get(
+      `/api/posts/${postId}/has-liked`
+    );
+    setHasLiked(response.data.hasLiked);
+  };
+  checkIfLiked();
+}, [postId]);
+```
 
-4. **Fuzzy Search** (Typo Tolerance):
-   • "raect" → suggests "react"
-   • Levenshtein distance algorithm
-   • Did you mean...?
-   
-   ```javascript
-   // Backend with fuse.js or similar
-   import Fuse from 'fuse.js';
-   
-   const fuse = new Fuse(posts, {
-     keys: ['title', 'content'],
-     threshold: 0.3
-   });
-   ```
+3. **Like Animation on Load** (If already liked):
+```javascript
+useEffect(() => {
+  if (hasLiked) {
+    setLiked(true);
+    setTimeout(() => setLiked(false), 100);
+  }
+}, [hasLiked]);
+```
 
-5. **Search Analytics**:
-   • Track popular searches
-   • Zero-result queries
-   • Click-through rates
-   • Search refinement patterns
+4. **Share Button**:
+```jsx
+<div className="relative group">
+  <button onClick={handleShare}>
+    <LuShare2 />
+    <span>Share</span>
+  </button>
+</div>
+```
 
-6. **Relevance Scoring**:
-   • Sort by relevance, not just date
-   • Boost title matches over content
-   • Consider post popularity (views)
-   
-   ```javascript
-   .sort({ 
-     score: { $meta: "textScore" },
-     views: -1 
-   });
-   ```
+5. **Bookmark Button**:
+```jsx
+<button onClick={handleBookmark}>
+  <LuBookmark className={clsx(bookmarked && "fill-current")} />
+</button>
+```
 
-7. **Highlighting Search Terms**:
-   • Highlight matched keywords in results
-   • Shows why post matched
-   
-   ```javascript
-   const highlightText = (text, query) => {
-     const regex = new RegExp(`(${query})`, 'gi');
-     return text.replace(regex, '<mark>$1</mark>');
-   };
-   ```
+6. **Scroll-to-Comments** (Comment button):
+```javascript
+const handleCommentClick = () => {
+  const commentsSection = document.getElementById('comments');
+  commentsSection?.scrollIntoView({ behavior: 'smooth' });
+};
+```
 
-8. **Search Filters Panel**:
-   • Sidebar with filter options
-   • Date range picker
-   • Author multi-select
-   • Tag checkboxes
-   • Reading time filter
+7. **Like Users List** (Who liked):
+```jsx
+<Modal isOpen={showLikers}>
+  <h3>Liked by:</h3>
+  {likers.map(user => (
+    <div key={user._id}>
+      <img src={user.profileImageUrl} />
+      <span>{user.name}</span>
+    </div>
+  ))}
+</Modal>
+```
 
-9. **Voice Search**:
-   • Web Speech API
-   • Speak search query
-   • Accessibility feature
-   
-   ```javascript
-   const recognition = new webkitSpeechRecognition();
-   recognition.onresult = (event) => {
-     const transcript = event.results[0][0].transcript;
-     setQuery(transcript);
-   };
-   ```
+8. **Like Count Animation**:
+```javascript
+// Animate count increment
+const [displayCount, setDisplayCount] = useState(postLikes);
 
-10. **Export Search Results**:
-    • Download as PDF
-    • Share search URL
-    • Email results
-    • Save search query
+useEffect(() => {
+  if (displayCount < postLikes) {
+    const timer = setTimeout(() => {
+      setDisplayCount(prev => prev + 1);
+    }, 50);
+    return () => clearTimeout(timer);
+  }
+}, [displayCount, postLikes]);
+```
 
-TECHNICAL IMPROVEMENTS:
+9. **Confetti Effect** (On milestone):
+```javascript
+if (postLikes === 100 || postLikes === 1000) {
+  // Trigger confetti animation
+  triggerConfetti();
+}
+```
+
+10. **Haptic Feedback** (Mobile):
+```javascript
+const handleLikeClick = async () => {
+  // Vibrate on mobile
+  if (navigator.vibrate) {
+    navigator.vibrate(50);
+  }
+  // ... rest of logic
+};
+```
+
+BACKEND ENHANCEMENTS:
 ─────────────────────────────────────────────────────────────────────────────
-• Elasticsearch integration
-• Redis caching layer
-• GraphQL for flexible queries
-• Infinite scroll pagination
-• Virtual scrolling for large lists
-• Service worker for offline search
-• Progressive Web App features
+1. **User-Like Association**:
+```javascript
+// New schema
+const likeSchema = new mongoose.Schema({
+  post: { type: ObjectId, ref: 'BlogPost' },
+  user: { type: ObjectId, ref: 'User' },
+  createdAt: { type: Date, default: Date.now }
+});
 
-SEO IMPROVEMENTS:
-─────────────────────────────────────────────────────────────────────────────
-• Dynamic meta tags for search pages
-• Structured data for search results
-• Canonical URLs
-• Breadcrumb navigation
-• XML sitemap for search pages
+// Check if user liked
+const hasLiked = await Like.exists({ 
+  post: postId, 
+  user: req.user._id 
+});
+```
 
-ANALYTICS & MONITORING:
+2. **Prevent Multiple Likes**:
+```javascript
+const like = await Like.findOne({ 
+  post: postId, 
+  user: userId 
+});
+
+if (like) {
+  return res.status(400).json({ 
+    message: "Already liked" 
+  });
+}
+
+await Like.create({ post: postId, user: userId });
+await BlogPost.findByIdAndUpdate(postId, { $inc: { likes: 1 } });
+```
+
+3. **Get Likers**:
+```javascript
+const likers = await Like.find({ post: postId })
+  .populate('user', 'name profileImageUrl')
+  .sort({ createdAt: -1 });
+```
+
+4. **Like Notifications**:
+```javascript
+// Notify post author when someone likes
+const post = await BlogPost.findById(postId);
+await Notification.create({
+  user: post.author,
+  type: 'like',
+  message: `${req.user.name} liked your post`,
+  link: `/post/${post.slug}`
+});
+```
+
+ANALYTICS ENHANCEMENTS:
 ─────────────────────────────────────────────────────────────────────────────
-• Track search queries
-• Monitor response times
-• Error rate tracking
-• A/B testing search UI
-• User behavior heatmaps
+• Track like timestamps
+• Analyze like patterns
+• Most liked posts dashboard
+• Like trends over time
+• User engagement metrics
+
+UI/UX ENHANCEMENTS:
+─────────────────────────────────────────────────────────────────────────────
+• Different icons (heart, thumbs up, star)
+• Customizable button position
+• Mobile-optimized sizing
+• Dark mode support
+• Multiple reaction types (like Facebook)
+• Like count milestone badges
+
+================================================================================
+15. TECHNICAL DEEP DIVE
+================================================================================
+
+REACT HOOKS USED:
+─────────────────────────────────────────────────────────────────────────────
+1. **useState**:
+```javascript
+const [postLikes, setPostLikes] = useState(likes || 0);
+const [liked, setLiked] = useState(false);
+```
+
+Purpose: Component state management
+Updates: Trigger re-renders
+Persistence: Resets on unmount
+
+2. **useEffect** (Potential):
+```javascript
+useEffect(() => {
+  // Check if user already liked
+  checkUserLike();
+}, [postId]);
+```
+
+Not currently used, but recommended for:
+• Fetching like status
+• Setting up event listeners
+• Cleanup on unmount
+
+3. **useCallback** (Recommended):
+```javascript
+const handleLikeClick = useCallback(async () => {
+  // Logic
+}, [postId]);
+```
+
+Benefits:
+• Prevents function recreation
+• Better memoization
+• Performance optimization
+
+CONDITIONAL CLASS NAMES (clsx):
+─────────────────────────────────────────────────────────────────────────────
+```javascript
+import clsx from 'clsx';
+
+className={clsx(
+  "base-classes",
+  condition && "conditional-class",
+  {
+    "class-1": condition1,
+    "class-2": condition2
+  }
+)}
+```
+
+Example:
+```javascript
+className={clsx(
+  "text-3xl transition-all duration-500",
+  liked 
+    ? "text-pink-500 scale-125 drop-shadow-lg"
+    : "text-gray-600 group-hover:text-pink-500"
+)}
+```
+
+Benefits:
+• Clean conditional styling
+• Readable code
+• Type-safe with TypeScript
+• Better than template literals
+
+CSS-IN-JS (Inline Styles):
+─────────────────────────────────────────────────────────────────────────────
+```jsx
+<style jsx>{`
+  @keyframes float { ... }
+  .group:hover { ... }
+`}</style>
+```
+
+Approach: Scoped CSS in JSX
+Scope: Component-level only
+Benefits:
+• No global CSS pollution
+• Co-located with component
+• Dynamic styles possible
+
+ASYNC/AWAIT PATTERN:
+─────────────────────────────────────────────────────────────────────────────
+```javascript
+const handleLikeClick = async () => {
+  try {
+    const response = await axiosInstance.post(...);
+    // Handle success
+  } catch (error) {
+    // Handle error
+  }
+};
+```
+
+vs. Promises:
+```javascript
+const handleLikeClick = () => {
+  axiosInstance.post(...)
+    .then(response => {
+      // Handle success
+    })
+    .catch(error => {
+      // Handle error
+    });
+};
+```
+
+Async/await is preferred:
+• More readable
+• Easier error handling
+• Works with try/catch
+• Looks synchronous
+
+SETTIMEOUT FOR ANIMATION:
+─────────────────────────────────────────────────────────────────────────────
+```javascript
+setTimeout(() => {
+  setLiked(false);
+}, 100);
+```
+
+Why not clearTimeout?
+• One-time timer
+• Component unmount cleanup not critical
+• Short duration (100ms)
+
+With cleanup:
+```javascript
+useEffect(() => {
+  if (liked) {
+    const timer = setTimeout(() => {
+      setLiked(false);
+    }, 100);
+    
+    return () => clearTimeout(timer);  // Cleanup
+  }
+}, [liked]);
+```
+
+FUNCTIONAL UPDATE PATTERN:
+─────────────────────────────────────────────────────────────────────────────
+```javascript
+setPostLikes(prevState => prevState + 1);
+```
+
+Why prevState?
+• Ensures correct current value
+• Works with React batching
+• Prevents race conditions
+
+Example scenario:
+```javascript
+// ❌ Potential issue
+setPostLikes(postLikes + 1);  // Uses value from closure
+setPostLikes(postLikes + 1);  // Same value, only +1 total
+
+// ✓ Correct
+setPostLikes(prev => prev + 1);  // prev = current
+setPostLikes(prev => prev + 1);  // prev = updated, +2 total
+```
+
+MONGODB ATOMIC OPERATIONS:
+─────────────────────────────────────────────────────────────────────────────
+$inc Operator:
+```javascript
+{ $inc: { likes: 1 } }
+```
+
+Advantages over read-modify-write:
+1. **Atomic**: Single operation
+2. **Fast**: No round trip
+3. **Safe**: No race conditions
+4. **Efficient**: Uses database index
+
+Other atomic operators:
+```javascript
+$inc: { likes: 1 }          // Increment
+$dec: { likes: 1 }          // Decrement  
+$push: { array: item }      // Add to array
+$pull: { array: item }      // Remove from array
+$set: { field: value }      // Set value
+$unset: { field: "" }       // Remove field
+```
+
+JWT AUTHENTICATION FLOW:
+─────────────────────────────────────────────────────────────────────────────
+1. User logs in
+2. Backend generates JWT token
+3. Frontend stores in localStorage
+4. Axios interceptor adds to all requests:
+   ```javascript
+   headers: { Authorization: `Bearer ${token}` }
+   ```
+5. Backend protect middleware verifies token
+6. Extracts user from token
+7. Attaches to req.user
+8. Controller accesses req.user._id
+
+TOKEN STRUCTURE:
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
+eyJpZCI6IjUwN2YxZjc3YmNmODZjZDc5OTQzOTAxMSIsImlhdCI6MTYzNzc1NjQwMH0.
+Qf5KwJWwfZzX-RqH8t_7Ym9UWJQ6VpN7WLk8Tz2Ykh4
+
+Header.Payload.Signature
+```
+
+PERFORMANCE METRICS:
+─────────────────────────────────────────────────────────────────────────────
+• API Response Time: ~50-200ms
+• Animation Duration: 100-700ms
+• Total Interaction: < 1 second
+• Re-render Cost: Minimal (local state only)
+• Memory Usage: Low (small component)
+
+BROWSER COMPATIBILITY:
+─────────────────────────────────────────────────────────────────────────────
+✓ Chrome 90+
+✓ Firefox 88+
+✓ Safari 14+
+✓ Edge 90+
+
+Features used:
+• CSS Grid (95% support)
+• CSS Transforms (99% support)
+• Backdrop Filter (90% support)
+• Async/Await (96% support)
+
+MOBILE RESPONSIVENESS:
+─────────────────────────────────────────────────────────────────────────────
+Fixed positioning works on mobile:
+• Always visible
+• Above keyboard
+• Touch-friendly size (56px+ height)
+• No horizontal scroll
+
+Potential issue:
+• May cover content on small screens
+• Consider bottom sheet on mobile
+• Add toggle to show/hide
+
+DEBUGGING TIPS:
+─────────────────────────────────────────────────────────────────────────────
+1. Check Network Tab:
+   • POST /api/posts/:id/like
+   • Status 200 = success
+   • Check request headers for auth token
+
+2. Console Logs:
+   ```javascript
+   console.log('Liked:', liked);
+   console.log('Count:', postLikes);
+   console.log('Response:', response.data);
+   ```
+
+3. React DevTools:
+   • Check component state
+   • Verify props passed correctly
+   • Monitor re-renders
+
+4. Database Check:
+   ```javascript
+   // MongoDB shell
+   db.blogposts.findOne({ _id: ObjectId("...") })
+   // Check likes field
+   ```
+
+COMMON ISSUES:
+─────────────────────────────────────────────────────────────────────────────
+1. **Token Not Sent**:
+   • Check axios interceptor
+   • Verify token in localStorage
+   • Check Authorization header
+
+2. **Count Not Updating**:
+   • Check API response
+   • Verify state update
+   • Check MongoDB update
+
+3. **Animation Not Working**:
+   • Check liked state
+   • Verify Tailwind classes
+   • Check CSS specificity
+
+4. **Button Not Visible**:
+   • Check z-index
+   • Verify fixed positioning
+   • Check overflow on parent
 
 ================================================================================
                               END OF DOCUMENTATION
