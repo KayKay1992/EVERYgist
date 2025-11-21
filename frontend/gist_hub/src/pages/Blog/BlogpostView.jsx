@@ -254,14 +254,14 @@ const BlogpostView = () => {
                     </div>
 
                     {/* Cover Image */}
-                    <div className="relative rounded-2xl overflow-hidden shadow-2xl group">
+                    <div className="relative rounded-2xl overflow-hidden shadow-2xl group max-h-[500px]">
                       <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                       <div className="absolute -inset-0.5 bg-linear-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
                       {blogPostData.coverImageUrl && (
                         <img
                           src={blogPostData.coverImageUrl}
                           alt={blogPostData.title}
-                          className="relative w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700"
+                          className="relative w-full h-full max-h-[500px] object-cover transform group-hover:scale-105 transition-transform duration-700"
                         />
                       )}
                     </div>

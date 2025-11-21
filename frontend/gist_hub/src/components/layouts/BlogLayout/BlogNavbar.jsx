@@ -12,6 +12,7 @@ import ProfileInfoCard from "../../Cards/ProfileInfoCard";
 import Login from "../../Auth/Login";
 import SignUp from "../../Auth/SignUp";
 import Modal from "../../Modal";
+import SearchBarPopup from "../../../pages/Blog/components/SearchBarPopup";
 
 const BlogNavbar = ({ activeMenu }) => {
   const { user, setOpenAuthForm } = useContext(UserContext);
@@ -121,6 +122,11 @@ const BlogNavbar = ({ activeMenu }) => {
       </div>
 
       <AuthModel />
+      <SearchBarPopup
+        isOpen={openSearchBar}
+        setIsOpen={setOpenSearchBar}
+      
+      />
     </>
   );
 };
