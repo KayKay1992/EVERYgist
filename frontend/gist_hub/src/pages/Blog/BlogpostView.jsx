@@ -17,6 +17,7 @@ import MarkdownContent from "./components/MarkdownContent";
 import SharePost from "./components/SharePost";
 import { sanitizeMarkdown } from "../../utils/helper";
 import CommentInfo from "./components/CommentInfo";
+import Drawer from "../../components/Drawer";
 
 const BlogpostView = () => {
   const { slug } = useParams();
@@ -31,6 +32,7 @@ const BlogpostView = () => {
   const [openSummarizeDrawer, setOpenSummarizeDrawer] = useState(false);
   const [summaryContent, setSummaryContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   //Get Post Data by slug
@@ -71,7 +73,36 @@ const BlogpostView = () => {
   };
 
   //Generate Summary for Blog Post
-  const generateBlogPostSummary = async () => {};
+  const generateBlogPostSummary = async () => {
+    try {
+      setErrorMsg("");
+      setSummaryContent("");
+      setOpenSummarizeDrawer(true);
+      setIsSummaryLoading(true);
+
+      const response = await axiosInstance.post(
+        API_PATHS.AI.GENERATE_POST_SUMMARY,
+        {
+          content: blogPostData.content || "",
+        }
+      );
+
+      if (response.data) {
+        setSummaryContent(response.data);
+      } else {
+        setErrorMsg("No summary generated. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error generating blog post summary:", error);
+      setErrorMsg(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to generate summary. Please try again."
+      );
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  };
 
   //Increment Post Views
   const incrementViews = async (postId) => {
@@ -496,6 +527,125 @@ const BlogpostView = () => {
               </div>
             </div>
           </div>
+
+          <Drawer
+            isOpen={openSummarizeDrawer}
+            onClose={() => {
+              setOpenSummarizeDrawer(false);
+              setErrorMsg("");
+            }}
+            title={summaryContent?.title || blogPostData?.title}
+          >
+            {/* Loading State */}
+            {isSummaryLoading && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                  <LuSparkles className="text-purple-600 animate-spin text-xl" />
+                  <p className="text-sm font-medium text-purple-700">
+                    Generating AI summary...
+                  </p>
+                </div>
+                <SkeletonLoader />
+              </div>
+            )}
+
+            {/* Error State */}
+            {!isSummaryLoading && errorMsg && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <div className="flex gap-3">
+                  <LuCircleAlert
+                    className="text-amber-600 shrink-0 mt-0.5"
+                    size={20}
+                  />
+                  <div>
+                    <h6 className="font-semibold text-amber-900 mb-1">
+                      Unable to generate summary
+                    </h6>
+                    <p className="text-sm text-amber-700">{errorMsg}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Success State */}
+            {!isSummaryLoading && !errorMsg && summaryContent && (
+              <div className="space-y-6">
+                {/* Summary Section */}
+                {summaryContent?.summary && (
+                  <div className="p-5 bg-linear-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                    <h6 className="text-sm font-bold text-purple-700 mb-3 flex items-center gap-2">
+                      <LuSparkles className="text-base" />
+                      Summary
+                    </h6>
+                    <p className="text-gray-700 leading-relaxed text-[15px]">
+                      {summaryContent.summary}
+                    </p>
+                  </div>
+                )}
+
+                {/* What You Will Learn Section */}
+                {summaryContent?.what_you_will_learn &&
+                  summaryContent.what_you_will_learn.length > 0 && (
+                    <div className="p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                      <h6 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg
+                          className="w-5 h-5 text-pink-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        What You'll Learn
+                      </h6>
+                      <ul className="space-y-3">
+                        {summaryContent.what_you_will_learn.map(
+                          (item, index) => (
+                            <li
+                              key={index}
+                              className="flex items-start gap-3 text-gray-700 text-[15px]"
+                            >
+                              <span className="shrink-0 w-6 h-6 rounded-full bg-linear-to-br from-purple-500 to-pink-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                                {index + 1}
+                              </span>
+                              <span className="leading-relaxed">{item}</span>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
+                {/* Fallback for plain string content */}
+                {typeof summaryContent === "string" && (
+                  <div className="prose prose-sm max-w-none">
+                    <MarkdownContent content={summaryContent} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !errorMsg && !summaryContent && (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-linear-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                  <LuSparkles className="text-purple-500 text-3xl" />
+                </div>
+                <h6 className="text-lg font-semibold text-gray-900 mb-2">
+                  No summary available
+                </h6>
+                <p className="text-sm text-gray-600">
+                  Click the AI Summary button to generate a summary of this
+                  post.
+                </p>
+              </div>
+            )}
+          </Drawer>
         </>
       )}
     </BlogLayout>

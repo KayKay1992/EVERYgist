@@ -1,837 +1,911 @@
 ================================================================================
-                  COMMENT SECTION IMPLEMENTATION DOCUMENTATION
+              AI BLOG POST SUMMARY GENERATION DOCUMENTATION
 ================================================================================
 
 TABLE OF CONTENTS
 ─────────────────────────────────────────────────────────────────────────────
-1. Overview & Architecture
-2. Component Hierarchy
-3. State Management
-4. API Integration
-5. Comment Submission Flow
-6. Nested Replies System
-7. CommentInfo Component
-8. CommentReplyInput Component
-9. UI/UX Features
-10. Validation & Error Handling
-11. Real-time Updates
-12. Styling & Animations
-13. Security Considerations
-14. Performance Optimizations
+1. Overview & Purpose
+2. System Architecture
+3. Frontend Implementation
+4. Backend Implementation
+5. AI Integration (Google Gemini)
+6. Drawer Component Design
+7. State Management
+8. API Flow & Data Structure
+9. Error Handling
+10. UI/UX Features
+11. Loading States
+12. Response Format
+13. Security & Authentication
+14. Performance Considerations
 15. Future Enhancements
 
 ================================================================================
-1. OVERVIEW & ARCHITECTURE
+1. OVERVIEW & PURPOSE
 ================================================================================
 
-The comment section is a comprehensive, feature-rich system built with React
-that enables users to:
-  • Post top-level comments on blog posts
-  • Reply to existing comments (nested replies)
-  • View comment threads with visual hierarchy
-  • Generate AI-powered replies (optional)
-  • See real-time comment counts and updates
+The AI Blog Post Summary feature provides readers with quick, intelligent
+summaries of lengthy blog posts using Google's Gemini 2.0 AI model.
 
-ARCHITECTURAL PATTERN:
-  ┌─────────────────────┐
-  │  BlogpostView.jsx   │  ← Main Container
-  └──────────┬──────────┘
-             │
-             ├─── CommentReplyInput.jsx  ← Input Component
-             │
-             └─── CommentInfo.jsx        ← Comment Display (Recursive)
-                       │
-                       └─── CommentInfo.jsx (Nested Replies)
+KEY BENEFITS:
+  ✓ Time-saving for readers
+  ✓ SEO-friendly titles and summaries
+  ✓ Structured learning outcomes
+  ✓ Enhanced user engagement
+  ✓ Improved accessibility
 
-================================================================================
-2. COMPONENT HIERARCHY
-================================================================================
-
-BlogpostView (Parent)
-├── Comment Section Header
-│   ├── Comment count display with icon
-│   └── "Add Comment" button
-│
-├── CommentReplyInput (Top-level)
-│   ├── User avatar
-│   ├── Text input field
-│   ├── AI Generate button (optional)
-│   └── Post/Cancel buttons
-│
-└── Comments List
-    └── CommentInfo (Recursive)
-        ├── Avatar with gradient ring
-        ├── Author name & timestamp
-        ├── Comment content
-        ├── Action buttons (Reply, View Replies)
-        ├── CommentReplyInput (Nested)
-        └── Sub-replies (Recursive CommentInfo)
+USER FLOW:
+  1. User clicks "AI Summary" button on blog post
+  2. Drawer slides open from right side
+  3. Loading state shows AI generation in progress
+  4. Summary appears with structured sections:
+     - Concise 300-word summary
+     - "What You'll Learn" bullet points
 
 ================================================================================
-3. STATE MANAGEMENT
+2. SYSTEM ARCHITECTURE
 ================================================================================
 
-BLOGPOSTVIEW STATE:
+COMPONENT HIERARCHY:
+┌─────────────────────────────────────┐
+│      BlogpostView.jsx               │ ← Main Page Component
+│  ┌───────────────────────────────┐  │
+│  │  AI Summary Button            │  │ ← Trigger
+│  └───────────────────────────────┘  │
+│  ┌───────────────────────────────┐  │
+│  │  Drawer Component             │  │ ← Display Container
+│  │  ┌─────────────────────────┐  │  │
+│  │  │ Loading State           │  │  │ ← Spinner + Skeleton
+│  │  ├─────────────────────────┤  │  │
+│  │  │ Error State             │  │  │ ← Error Message
+│  │  ├─────────────────────────┤  │  │
+│  │  │ Success State           │  │  │ ← Summary Display
+│  │  │ • Summary Card          │  │  │
+│  │  │ • What You'll Learn     │  │  │
+│  │  └─────────────────────────┘  │  │
+│  └───────────────────────────────┘  │
+└─────────────────────────────────────┘
+         ↓ API Call
+┌─────────────────────────────────────┐
+│      Backend (Node.js)              │
+│  ┌───────────────────────────────┐  │
+│  │  aiController.js              │  │ ← Route Handler
+│  └───────────────────────────────┘  │
+│  ┌───────────────────────────────┐  │
+│  │  prompt.js                    │  │ ← AI Prompt Generator
+│  └───────────────────────────────┘  │
+└─────────────────────────────────────┘
+         ↓ AI Request
+┌─────────────────────────────────────┐
+│    Google Gemini 2.0 Flash Lite     │ ← AI Processing
+└─────────────────────────────────────┘
+
+================================================================================
+3. FRONTEND IMPLEMENTATION
+================================================================================
+
+STATE VARIABLES:
 ─────────────────────────────────────────────────────────────────────────────
-• blogPostData: null          → Current blog post object
-• comments: null              → Array of top-level comments with nested replies
-• replyText: ""               → Text for new top-level comment
-• isShowReplyForm: false      → Toggle visibility of main comment form
-
-COMMENTINFO STATE (Per Component Instance):
-─────────────────────────────────────────────────────────────────────────────
-• replyText: ""               → Text for nested reply
-• showReplyForm: false        → Toggle reply input form
-• showSubReplies: false       → Toggle visibility of nested replies
-
-STATE INITIALIZATION:
 ```javascript
-const [blogPostData, setBlogPostData] = useState(null);
-const [comments, setComments] = useState(null);
-const [replyText, setReplyText] = useState("");
-const [isShowReplyForm, setIsShowReplyForm] = useState(false);
+const [openSummarizeDrawer, setOpenSummarizeDrawer] = useState(false);
+const [summaryContent, setSummaryContent] = useState("");
+const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+const [errorMsg, setErrorMsg] = useState("");
 ```
 
-================================================================================
-4. API INTEGRATION
-================================================================================
+Purpose of Each State:
+• openSummarizeDrawer: Controls drawer visibility
+• summaryContent: Stores AI-generated summary object
+• isSummaryLoading: Dedicated loading state (prevents conflicts)
+• errorMsg: Stores error messages for display
 
-FETCH COMMENTS:
+GENERATE SUMMARY FUNCTION:
 ─────────────────────────────────────────────────────────────────────────────
-Endpoint: GET /api/comments/:postId
-Response Structure:
 ```javascript
-[
-  {
-    _id: "comment_id",
-    content: "Comment text",
-    author: { name: "User", profileImageUrl: "url" },
-    post: { _id: "post_id", title: "Post Title" },
-    createdAt: "2025-11-20T...",
-    updatedAt: "2025-11-20T...",
-    replies: [
-      {
-        _id: "reply_id",
-        content: "Reply text",
-        author: { name: "User", profileImageUrl: "url" },
-        parentComment: "comment_id",
-        replies: []
-      }
-    ]
-  }
-]
-```
+const generateBlogPostSummary = async () => {
+  try {
+    // 1. Reset states
+    setErrorMsg("");
+    setSummaryContent("");
+    
+    // 2. Show drawer and loading state
+    setOpenSummarizeDrawer(true);
+    setIsSummaryLoading(true);
 
-Backend Nesting Logic:
-```javascript
-// Backend creates nested structure
-const commentMap = {};
-comments.forEach(comment => {
-  comment.replies = [];
-  commentMap[comment._id] = comment;
-});
+    // 3. Make API call
+    const response = await axiosInstance.post(
+      API_PATHS.AI.GENERATE_POST_SUMMARY,
+      { content: blogPostData.content || "" }
+    );
 
-// Nest replies under parents
-comments.forEach(comment => {
-  if (comment.parentComment) {
-    const parent = commentMap[comment.parentComment];
-    if (parent) {
-      parent.replies.push(commentMap[comment._id]);
+    // 4. Handle success
+    if (response.data) {
+      setSummaryContent(response.data);
+    } else {
+      setErrorMsg("No summary generated. Please try again.");
     }
+  } catch (error) {
+    // 5. Handle error
+    console.error("Error generating blog post summary:", error);
+    setErrorMsg(
+      error?.response?.data?.message ||
+      error.message ||
+      "Failed to generate summary. Please try again."
+    );
+  } finally {
+    // 6. Stop loading
+    setIsSummaryLoading(false);
   }
-});
+};
 ```
 
-ADD COMMENT/REPLY:
+EXECUTION FLOW:
+  1. Clear previous errors and content
+  2. Open drawer immediately for better UX
+  3. Show loading indicator
+  4. Send blog post content to backend
+  5. Receive structured JSON response
+  6. Display in formatted cards
+  7. Handle errors gracefully
+
+AI SUMMARY BUTTON:
 ─────────────────────────────────────────────────────────────────────────────
-Endpoint: POST /api/comments/:postId
-Request Body:
 ```javascript
+<button
+  className="flex items-center gap-2 px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-medium group"
+  onClick={generateBlogPostSummary}
+>
+  <LuSparkles className="text-lg group-hover:rotate-12 transition-transform duration-300" />
+  <span>AI Summary</span>
+</button>
+```
+
+Features:
+• Purple-pink gradient background
+• Sparkles icon with rotation on hover
+• Scale animation on hover
+• Located in hero section meta info
+
+================================================================================
+4. BACKEND IMPLEMENTATION
+================================================================================
+
+ROUTE CONFIGURATION:
+─────────────────────────────────────────────────────────────────────────────
+File: backend/routes/aiRoutes.js
+```javascript
+router.post('/generate-summary', protect, generatePostSummary);
+```
+
+Endpoint: POST /api/ai/generate-summary
+Authentication: Required (protect middleware)
+Purpose: Generate AI summary for blog post content
+
+CONTROLLER FUNCTION:
+─────────────────────────────────────────────────────────────────────────────
+File: backend/controllers/aiController.js
+
+```javascript
+const generatePostSummary = async (req, res) => {
+  try {
+    // 1. Extract content from request
+    const { content } = req.body;
+    
+    // 2. Validate content exists
+    if (!content) {
+      return res.status(400).json({ 
+        message: "Post content is required" 
+      });
+    }
+    
+    // 3. Generate AI prompt
+    const prompt = postSummaryPrompt(content);
+    
+    // 4. Call Google Gemini AI
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash-lite",
+      contents: prompt,
+    });
+    
+    // 5. Extract raw text
+    let rawText = response.text || "";
+
+    // 6. Clean JSON markers
+    const cleanedText = rawText
+      .replace(/^```json\s*/, "")
+      .replace(/```$/, "")
+      .trim();
+
+    // 7. Parse JSON response
+    const data = JSON.parse(cleanedText);
+    
+    // 8. Return structured data
+    res.status(200).json(data);
+    
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate post summary",
+      error: error.message,
+    });
+  }
+};
+```
+
+KEY STEPS:
+  1. Validate request has content
+  2. Generate structured AI prompt
+  3. Query Gemini 2.0 Flash Lite model
+  4. Clean response (remove markdown code blocks)
+  5. Parse JSON safely
+  6. Return to frontend
+
+================================================================================
+5. AI INTEGRATION (GOOGLE GEMINI)
+================================================================================
+
+AI PROMPT ENGINEERING:
+─────────────────────────────────────────────────────────────────────────────
+File: backend/utils/prompt.js
+
+```javascript
+const postSummaryPrompt = (blogContent) => `
+You are an AI assistant tasked with generating a concise summary of a blog post.
+
+Instructions:
+- Read the provided blog post content carefully.
+- Generate a short, catchy, SEO-friendly title (max 12 words) that 
+  encapsulates the main theme of the blog post.
+- Write a clear, engaging summary of about 300 words that captures 
+  the essence of the blog post.
+- Ensure the summary is easy to read and understand, avoiding 
+  technical jargon.
+- The tone should be informative and engaging, suitable for a general 
+  audience interested in the blog's topic.
+- At the end of the summary, add a markdown section titled 
+  **## what you will learn** that lists 3-5 key takeaways from the 
+  blog post in bullet points.
+
+Return the result in **valid JSON format** as follows:
 {
-  content: "Comment text",
-  parentComment: "parent_comment_id" // null for top-level comments
+  "title": "Short SEO-friendly Title",
+  "summary": "300-word engaging summary",
+  "what_you_will_learn": [
+    "Key takeaway 1",
+    "Key takeaway 2",
+    "Key takeaway 3"
+  ]
+}
+
+Only return valid JSON. Do not include markdown or code blocks around the JSON.
+Ensure the JSON is properly formatted without any extra text or explanation.
+
+Blog Post Content:
+"""${blogContent}"""
+`;
+```
+
+PROMPT STRUCTURE:
+  1. Role Definition: "You are an AI assistant..."
+  2. Task Description: Generate summary and title
+  3. Constraints:
+     - Title: Max 12 words, SEO-friendly
+     - Summary: ~300 words, engaging tone
+     - Learning points: 3-5 bullets
+  4. Output Format: Strict JSON schema
+  5. Quality Guidelines: No jargon, general audience
+  6. Content Input: Full blog post markdown
+
+MODEL SELECTION:
+  • Model: gemini-2.0-flash-lite
+  • Reason: Fast, cost-effective for text summarization
+  • Alternative: gemini-2.0-flash (more powerful)
+
+================================================================================
+6. DRAWER COMPONENT DESIGN
+================================================================================
+
+PREMIUM DRAWER STYLING:
+─────────────────────────────────────────────────────────────────────────────
+File: frontend/gist_hub/src/components/Drawer.jsx
+
+STRUCTURE:
+```
+┌─────────────────────────────────┐
+│ Backdrop (blur overlay)         │
+│  ┌───────────────────────────┐  │
+│  │ Drawer Panel (slides in)  │  │
+│  │ ┌───────────────────────┐ │  │
+│  │ │ Gradient Top Border   │ │  │
+│  │ ├───────────────────────┤ │  │
+│  │ │ Header Section        │ │  │
+│  │ │ • AI SUMMARY badge    │ │  │
+│  │ │ • Post title          │ │  │
+│  │ │ • Close button        │ │  │
+│  │ ├───────────────────────┤ │  │
+│  │ │ Content Section       │ │  │
+│  │ │ (scrollable)          │ │  │
+│  │ │ {children}            │ │  │
+│  │ ├───────────────────────┤ │  │
+│  │ │ Footer Gradient       │ │  │
+│  │ └───────────────────────┘ │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘
+```
+
+KEY FEATURES:
+  ✓ Backdrop overlay with blur effect (closes on click)
+  ✓ Slide-in animation (500ms ease-out)
+  ✓ Gradient top border (purple→pink→rose)
+  ✓ Premium header with AI badge
+  ✓ Custom scrollbar matching theme
+  ✓ Footer gradient for depth
+  ✓ Responsive width (full on mobile, 480-520px on desktop)
+  ✓ Accessibility (ARIA labels, role, keyboard support)
+
+BACKDROP:
+```javascript
+<div
+  className={`fixed inset-0 bg-black/40 backdrop-blur-sm 
+    transition-opacity duration-300 z-40 ${
+    isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+  }`}
+  onClick={onClose}
+/>
+```
+
+HEADER DESIGN:
+```javascript
+<div className="relative bg-linear-to-br from-purple-50/50 via-pink-50/30 to-white border-b border-gray-200 px-6 py-5">
+  {/* AI SUMMARY Badge */}
+  <div className="inline-flex items-center gap-2 px-3 py-1.5 
+    bg-linear-to-r from-purple-100 to-pink-100 rounded-full">
+    <LuSparkles className="text-purple-600 animate-pulse" />
+    <span className="text-xs font-bold text-transparent 
+      bg-clip-text bg-linear-to-r from-purple-600 to-pink-600">
+      AI SUMMARY
+    </span>
+  </div>
+  
+  {/* Title */}
+  <h5 className="text-xl md:text-2xl font-bold text-gray-900 
+    leading-tight line-clamp-2">
+    {title}
+  </h5>
+</div>
+```
+
+CUSTOM SCROLLBAR:
+```css
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #9333EA, #DB2777);
+  border-radius: 10px;
 }
 ```
 
-Backend Processing:
+================================================================================
+7. STATE MANAGEMENT
+================================================================================
+
+SEPARATE LOADING STATE:
+─────────────────────────────────────────────────────────────────────────────
+Why use isSummaryLoading instead of isLoading?
+
+PROBLEM:
+• isLoading is used globally for page loading
+• When generating summary, sets isLoading = true
+• This could hide/show other loading states on page
+• Causes conflicts and unexpected behavior
+
+SOLUTION:
+• Dedicated isSummaryLoading state
+• Independent of page loading state
+• Clean separation of concerns
+• No side effects on other components
+
+STATE FLOW:
+```
+User clicks "AI Summary"
+  ↓
+setOpenSummarizeDrawer(true)  → Drawer opens immediately
+setIsSummaryLoading(true)     → Show loading spinner
+  ↓
+API Call to backend
+  ↓
+[SUCCESS]                     [ERROR]
+setSummaryContent(data)       setErrorMsg(message)
+setIsSummaryLoading(false)    setIsSummaryLoading(false)
+  ↓                            ↓
+Display summary cards         Display error card
+```
+
+CLEANUP ON CLOSE:
 ```javascript
-const comment = await Comment.create({
-  post: postId,
-  author: req.user._id,
-  content,
-  parentComment: parentComment || null,
-});
+onClose={() => {
+  setOpenSummarizeDrawer(false);
+  setErrorMsg("");  // Clear errors when closing
+}}
 ```
 
 ================================================================================
-5. COMMENT SUBMISSION FLOW
+8. API FLOW & DATA STRUCTURE
 ================================================================================
 
-TOP-LEVEL COMMENT SUBMISSION:
+REQUEST:
 ─────────────────────────────────────────────────────────────────────────────
-1. User clicks "Add Comment" button
-   → setIsShowReplyForm(true)
+```javascript
+POST /api/ai/generate-summary
+Headers: {
+  Authorization: Bearer <JWT_TOKEN>
+}
+Body: {
+  content: "Full blog post markdown content..."
+}
+```
 
-2. User types comment in CommentReplyInput
-   → Input onChange: setReplyText(e.target.value)
-
-3. User clicks "Post" button
-   → handleAddReply() called
-
-4. Validation:
-   ```javascript
-   if (!replyText || !replyText.trim()) {
-     toast.error("Comment cannot be empty");
-     return;
-   }
-   ```
-
-5. API Request:
-   ```javascript
-   await axiosInstance.post(
-     API_PATHS.COMMENTS.ADD(blogPostData._id),
-     { content: replyText }
-   );
-   ```
-
-6. Success Handling:
-   • Show success toast
-   • Hide reply form
-   • Clear input: setReplyText("")
-   • Refresh comments: fetchCommentByPostId()
-
-NESTED REPLY SUBMISSION:
+RESPONSE:
 ─────────────────────────────────────────────────────────────────────────────
-1. User clicks "Reply" on existing comment
-   → setShowReplyForm(true) in CommentInfo
+Success (200):
+```json
+{
+  "title": "Distance Learning: How Schools Adapted During the Pandemic",
+  "summary": "The COVID-19 pandemic dramatically shifted the educational landscape, forcing schools to rapidly transition to distance learning. This blog post examines how local schools navigated this unprecedented challenge. It details the initial hurdles, including technology access, teacher training, curriculum adaptation, and the crucial role of parental support...",
+  "what_you_will_learn": [
+    "Challenges schools faced during the shift to distance learning.",
+    "The tools and strategies schools used to facilitate online learning.",
+    "The emotional impact of the pandemic on students and how schools addressed it.",
+    "Unexpected benefits and lessons learned from the distance learning experience.",
+    "How schools are integrating these lessons to create a more resilient future for education."
+  ]
+}
+```
 
-2. User types reply
-   → setReplyText(value) in CommentInfo state
+Error (500):
+```json
+{
+  "message": "Failed to generate post summary",
+  "error": "Detailed error message"
+}
+```
 
-3. User clicks "Reply" button
-   → handleAddReply() in CommentInfo
-
-4. API Request includes parent:
-   ```javascript
-   await axiosInstance.post(
-     API_PATHS.COMMENTS.ADD(post._id),
-     {
-       content: replyText,
-       parentComment: commentId  // ← Links to parent
-     }
-   );
-   ```
-
-5. Success Handling:
-   • Show success toast
-   • Hide reply form
-   • Auto-expand replies: setShowSubReplies(true)
-   • Refresh all comments
+Error (400):
+```json
+{
+  "message": "Post content is required"
+}
+```
 
 ================================================================================
-6. NESTED REPLIES SYSTEM
+9. ERROR HANDLING
 ================================================================================
 
-RECURSIVE COMPONENT PATTERN:
+FRONTEND ERROR HANDLING:
 ─────────────────────────────────────────────────────────────────────────────
-CommentInfo renders itself recursively for nested replies:
+Multiple fallback layers:
 
 ```javascript
-{showSubReplies && replies?.length > 0 && (
-  <div className="mt-4 space-y-4">
-    {replies.map((comment) => (
-      <CommentInfo
-        commentId={comment._id}
-        content={comment.content}
-        replies={comment.replies || []}
-        isSubReply={true}  // ← Prevents infinite nesting
-        {...otherProps}
-      />
-    ))}
+setErrorMsg(
+  error?.response?.data?.message ||  // Backend error message
+  error.message ||                    // JavaScript error message
+  "Failed to generate summary. Please try again."  // Generic fallback
+);
+```
+
+ERROR DISPLAY:
+```javascript
+{!isSummaryLoading && errorMsg && (
+  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+    <div className="flex gap-3">
+      <LuCircleAlert className="text-amber-600 shrink-0 mt-0.5" size={20} />
+      <div>
+        <h6 className="font-semibold text-amber-900 mb-1">
+          Unable to generate summary
+        </h6>
+        <p className="text-sm text-amber-700">{errorMsg}</p>
+      </div>
+    </div>
   </div>
 )}
 ```
 
-NESTING DEPTH CONTROL:
+BACKEND ERROR HANDLING:
 ─────────────────────────────────────────────────────────────────────────────
-• isSubReply prop prevents nested replies from having "Reply" button
-• Only top-level comments can receive replies
-• Backend allows unlimited depth, frontend shows all levels
-
-VISUAL HIERARCHY:
-─────────────────────────────────────────────────────────────────────────────
-• Top-level: Full width, no indentation
-• Nested: ml-8 (2rem left margin)
-• Connection lines: Gradient vertical line from parent to children
-
+1. Content Validation:
 ```javascript
-{!isSubReply && (
-  <button onClick={() => setShowReplyForm(!showReplyForm)}>
-    Reply
-  </button>
-)}
+if (!content) {
+  return res.status(400).json({ message: "Post content is required" });
+}
+```
+
+2. AI Response Parsing:
+```javascript
+try {
+  const data = JSON.parse(cleanedText);
+  res.status(200).json(data);
+} catch (error) {
+  res.status(500).json({
+    message: "Failed to generate post summary",
+    error: error.message,
+  });
+}
+```
+
+3. JSON Cleaning:
+Removes markdown code blocks that Gemini sometimes adds:
+```javascript
+const cleanedText = rawText
+  .replace(/^```json\s*/, "")  // Remove opening ```json
+  .replace(/```$/, "")          // Remove closing ```
+  .trim();
 ```
 
 ================================================================================
-7. COMMENTINFO COMPONENT
+10. UI/UX FEATURES
 ================================================================================
 
-COMPONENT SIGNATURE:
+LOADING STATE:
 ─────────────────────────────────────────────────────────────────────────────
 ```javascript
-const CommentInfo = ({
-  commentId,        // Unique comment ID
-  authorName,       // Comment author's name
-  authorPhoto,      // Author's profile picture URL
-  content,          // Comment text
-  updatedOn,        // Formatted date string
-  post,             // Post object (for reply API)
-  replies,          // Array of nested replies
-  getAllComments,   // Function to refresh comments
-  onDelete,         // Delete handler
-  isSubReply,       // Boolean for nested comments
-}) => { ... }
-```
-
-KEY FEATURES:
-─────────────────────────────────────────────────────────────────────────────
-✓ Premium card design with gradient hover effects
-✓ Avatar with gradient ring and glow animation
-✓ Reply button with icon rotation on hover
-✓ View Replies button with badge counter
-✓ Collapsible nested replies with smooth animations
-✓ Visual connection lines for reply threads
-✓ Authentication check before allowing replies
-
-REPLY BUTTON LOGIC:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-onClick={() => {
-  if (!user) {
-    setOpenAuthForm(true);  // Prompt login
-    return;
-  }
-  setShowReplyForm(!showReplyForm);
-}}
-```
-
-VIEW REPLIES BUTTON:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-{replies?.length > 0 && (
-  <button onClick={() => setShowSubReplies(!showSubReplies)}>
-    <span className="badge">{replies.length}</span>
-    {replies.length === 1 ? "Reply" : "Replies"}
-    <LuChevronDown className={showSubReplies ? "rotate-180" : ""} />
-  </button>
-)}
-```
-
-================================================================================
-8. COMMENTREPLYINPUT COMPONENT
-================================================================================
-
-COMPONENT SIGNATURE:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-const CommentReplyInput = ({
-  user,               // Current user object
-  authorName,         // Original comment author (for @mention)
-  content,            // Original comment content (for AI context)
-  replyText,          // Controlled input value
-  setReplyText,       // State setter from parent
-  handleAddReply,     // Submit handler from parent
-  handleCancelReply,  // Cancel handler from parent
-  disableAutoGen,     // Hide AI generate button
-  type = "reply",     // "reply" or "new" (changes UI labels)
-}) => { ... }
-```
-
-DUAL MODE OPERATION:
-─────────────────────────────────────────────────────────────────────────────
-1. NEW COMMENT MODE (type="new"):
-   • Label: Shows author name
-   • Placeholder: "Share your thoughts... 💭"
-   • Button: "Post" with send icon
-   • No AI Generate (disableAutoGen=true)
-
-2. REPLY MODE (type="reply"):
-   • Label: "Reply to @{authorName}"
-   • Placeholder: "Write your reply... 💬"
-   • Button: "Reply" with reply icon
-   • AI Generate available (if enabled)
-
-INPUT FIELD INTEGRATION:
-─────────────────────────────────────────────────────────────────────────────
-Uses custom Input component with proper event handling:
-```javascript
-<Input
-  value={replyText}
-  onChange={(e) => setReplyText(e.target.value)}  // ← Critical fix
-  label={type == "new" ? authorName : `Reply to @${authorName}`}
-  placeholder={/* ... */}
-  type="text"
-/>
-```
-
-BUTTON STATES:
-─────────────────────────────────────────────────────────────────────────────
-Submit Button Disabled When:
-• replyText.length === 0
-• loading (AI generation in progress)
-
-Styling:
-```javascript
-className={`${
-  replyText?.length == 0 || loading
-    ? "opacity-50 cursor-not-allowed"
-    : "hover:from-sky-600 hover:to-sky-700 hover:scale-105"
-}`}
-```
-
-AI GENERATE FEATURE:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-const generateReply = async () => {
-  setLoading(true);
-  const aiResponse = await axiosInstance.post(
-    API_PATHS.AI.GENERATE_COMMENT_REPLY,
-    {
-      author: { name: authorName },
-      content,
-    }
-  );
-  if (aiResponse.data?.length > 0) {
-    setReplyText(aiResponse.data);
-  }
-  setLoading(false);
-};
-```
-
-================================================================================
-9. UI/UX FEATURES
-================================================================================
-
-VISUAL DESIGN SYSTEM:
-─────────────────────────────────────────────────────────────────────────────
-Color Scheme: Purple-Pink-Rose gradient theme
-• Purple-600 (#9333EA)
-• Pink-600 (#DB2777)
-• Rose-600 (#E11D48)
-• Sky-500/600 for accents
-
-GRADIENT HEADER:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-<div className="bg-linear-to-r from-purple-600 via-pink-600 to-rose-600">
-  <svg className="comment-icon">{/* ... */}</svg>
-  <h3>Comments ({comments?.length || 0})</h3>
-</div>
-```
-
-EMPTY STATE:
-─────────────────────────────────────────────────────────────────────────────
-When no comments exist:
-```javascript
-{comments?.length === 0 && (
-  <div className="text-center py-16">
-    <div className="gradient-circle">
-      <svg className="illustration">{/* ... */}</svg>
+{isSummaryLoading && (
+  <div className="space-y-4">
+    {/* Loading Message */}
+    <div className="flex items-center gap-3 p-4 bg-purple-50 
+      rounded-xl border border-purple-200">
+      <LuSparkles className="text-purple-600 animate-spin text-xl" />
+      <p className="text-sm font-medium text-purple-700">
+        Generating AI summary...
+      </p>
     </div>
-    <p className="text-gray-500">No comments yet</p>
-    <p className="text-sm text-gray-400">
-      Be the first to share your thoughts!
+    
+    {/* Skeleton Loader */}
+    <SkeletonLoader />
+  </div>
+)}
+```
+
+Features:
+• Spinning sparkles icon
+• Purple-themed message card
+• Skeleton loader for content preview
+• Smooth fade-in animation
+
+SUCCESS STATE - SUMMARY CARD:
+─────────────────────────────────────────────────────────────────────────────
+```javascript
+{summaryContent?.summary && (
+  <div className="p-5 bg-linear-to-br from-purple-50 to-pink-50 
+    rounded-xl border border-purple-200">
+    <h6 className="text-sm font-bold text-purple-700 mb-3 
+      flex items-center gap-2">
+      <LuSparkles className="text-base" />
+      Summary
+    </h6>
+    <p className="text-gray-700 leading-relaxed text-[15px]">
+      {summaryContent.summary}
     </p>
   </div>
 )}
 ```
 
-AVATAR STYLING:
+Design:
+• Gradient background (purple→pink)
+• Sparkles icon header
+• Relaxed line height for readability
+• 15px font size (optimal reading)
+
+SUCCESS STATE - WHAT YOU'LL LEARN:
 ─────────────────────────────────────────────────────────────────────────────
-Premium avatar with gradient ring glow:
 ```javascript
-<div className="relative">
-  {/* Glow effect */}
-  <div className="absolute inset-0 bg-linear-to-br from-purple-500 to-pink-500 rounded-full blur opacity-20 group-hover:opacity-40" />
-  
-  {/* Avatar ring */}
-  <div className="ring-2 ring-purple-200 group-hover:ring-purple-400">
-    {authorPhoto && <img src={authorPhoto} />}
+{summaryContent?.what_you_will_learn?.length > 0 && (
+  <div className="p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
+    <h6 className="text-sm font-bold text-gray-900 mb-4 
+      flex items-center gap-2">
+      <svg className="w-5 h-5 text-pink-600" /* checkmark icon */>
+      What You'll Learn
+    </h6>
+    <ul className="space-y-3">
+      {summaryContent.what_you_will_learn.map((item, index) => (
+        <li key={index} className="flex items-start gap-3 
+          text-gray-700 text-[15px]">
+          <span className="shrink-0 w-6 h-6 rounded-full 
+            bg-linear-to-br from-purple-500 to-pink-500 
+            text-white text-xs font-bold flex items-center 
+            justify-center mt-0.5">
+            {index + 1}
+          </span>
+          <span className="leading-relaxed">{item}</span>
+        </li>
+      ))}
+    </ul>
   </div>
-</div>
-```
-
-HOVER EFFECTS:
-─────────────────────────────────────────────────────────────────────────────
-• Comment cards: border-gray-200 → border-purple-200
-• Gradient accent bar opacity: 0 → 100
-• Avatar ring color change
-• Button background transitions
-• Icon rotations (Reply: 12°, Chevron: 180°)
-
-ANIMATIONS:
-─────────────────────────────────────────────────────────────────────────────
-• Reply form: animate-in slide-in-from-top duration-300
-• Button hover: scale-105
-• Icon hover: rotate-12
-• Smooth transitions: transition-all duration-300
-
-RESPONSIVE DESIGN:
-─────────────────────────────────────────────────────────────────────────────
-• AI Generate button: hidden on mobile (hidden sm:inline)
-• Flexible layouts with gap utilities
-• Proper spacing: p-6, gap-4, space-y-6
-• Text truncation: min-w-0 for comment content
-
-================================================================================
-10. VALIDATION & ERROR HANDLING
-================================================================================
-
-INPUT VALIDATION:
-─────────────────────────────────────────────────────────────────────────────
-Empty Comment Check:
-```javascript
-if (!replyText || !replyText.trim()) {
-  toast.error("Comment cannot be empty");
-  return;
-}
-```
-
-Whitespace-only Prevention:
-• .trim() removes leading/trailing spaces
-• Prevents submission of blank comments
-
-AUTHENTICATION CHECK:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-if (!user) {
-  setOpenAuthForm(true);
-  return;
-}
-```
-
-ERROR HANDLING:
-─────────────────────────────────────────────────────────────────────────────
-Top-level Comments:
-```javascript
-try {
-  await axiosInstance.post(/* ... */);
-  toast.success("Comment added successfully");
-} catch (error) {
-  console.error("Error adding reply:", error);
-  toast.error("Failed to add comment. Please try again.");
-}
-```
-
-Nested Replies:
-```javascript
-try {
-  await axiosInstance.post(/* ... */);
-  toast.success("Reply added successfully");
-  setShowSubReplies(true);  // Auto-expand to show new reply
-} catch (error) {
-  console.error("Error adding reply:", error);
-  toast.error("Failed to add reply. Please try again.");
-}
-```
-
-TOAST NOTIFICATIONS:
-─────────────────────────────────────────────────────────────────────────────
-Using react-hot-toast:
-• toast.error() - Red notification for errors
-• toast.success() - Green notification for success
-• Auto-dismiss after 3 seconds
-• Non-blocking, positioned top-right
-
-================================================================================
-11. REAL-TIME UPDATES
-================================================================================
-
-COMMENT REFRESH STRATEGY:
-─────────────────────────────────────────────────────────────────────────────
-After any comment/reply submission:
-```javascript
-fetchCommentByPostId(blogPostData._id);
-```
-
-REFRESH FLOW:
-─────────────────────────────────────────────────────────────────────────────
-1. User submits comment/reply
-2. API call succeeds
-3. fetchCommentByPostId() re-fetches all comments
-4. Backend rebuilds nested structure
-5. setComments() updates state
-6. React re-renders CommentInfo components
-7. New comment appears in UI
-
-OPTIMISTIC UI UPDATES:
-─────────────────────────────────────────────────────────────────────────────
-• Form hidden immediately after submit
-• Success toast shown before refresh completes
-• Input cleared instantly
-• Auto-expand replies on successful reply submission
-
-PROP DRILLING FOR REFRESH:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-<CommentInfo
-  getAllComments={() => fetchCommentByPostId(blogPostData._id)}
-  {...otherProps}
-/>
-```
-
-Each CommentInfo can trigger full refresh after nested reply.
-
-================================================================================
-12. STYLING & ANIMATIONS
-================================================================================
-
-TAILWIND CUSTOM UTILITIES:
-─────────────────────────────────────────────────────────────────────────────
-Custom gradient backgrounds:
-• bg-linear-to-r (instead of bg-gradient-to-r)
-• bg-linear-to-b (instead of bg-gradient-to-b)
-• bg-linear-to-br (instead of bg-gradient-to-br)
-
-COMMENT CARD STRUCTURE:
-─────────────────────────────────────────────────────────────────────────────
-```javascript
-<div className="group">
-  <div className="bg-white rounded-2xl border border-gray-200 hover:border-purple-200 hover:shadow-lg transition-all duration-300">
-    {/* Gradient accent bar */}
-    <div className="absolute top-0 left-0 w-1 h-full bg-linear-to-b from-purple-500 via-pink-500 to-rose-500 opacity-0 group-hover:opacity-100" />
-    
-    {/* Content */}
-  </div>
-</div>
-```
-
-CONNECTION LINES:
-─────────────────────────────────────────────────────────────────────────────
-Visual thread indicator for nested replies:
-```javascript
-<div className="absolute left-4 top-0 bottom-0 w-0.5 bg-linear-to-b from-purple-200 via-pink-200 to-transparent" />
-```
-
-BUTTON STYLES:
-─────────────────────────────────────────────────────────────────────────────
-Reply Button:
-```css
-text-gray-600 hover:text-purple-600 hover:bg-purple-50
-group-hover/btn:rotate-12 transition-transform
-```
-
-View Replies Button:
-```css
-text-gray-600 hover:text-pink-600 hover:bg-pink-50
-badge: bg-linear-to-r from-purple-100 to-pink-100
-```
-
-Submit Button:
-```css
-bg-linear-to-r from-sky-500 to-sky-600
-hover:from-sky-600 hover:to-sky-700
-hover:scale-105 hover:shadow-lg
-```
-
-SPACING SYSTEM:
-─────────────────────────────────────────────────────────────────────────────
-• Comment padding: p-6
-• Gap between elements: gap-4
-• Comment spacing: space-y-6
-• Nested margin: ml-8 (sub-replies), ml-12 (reply form)
-
-================================================================================
-13. SECURITY CONSIDERATIONS
-================================================================================
-
-AUTHENTICATION ENFORCEMENT:
-─────────────────────────────────────────────────────────────────────────────
-Frontend Check:
-```javascript
-if (!user) {
-  setOpenAuthForm(true);
-  return;
-}
-```
-
-Backend Middleware:
-• authMiddleware.js protects POST /api/comments/:postId
-• req.user populated by JWT verification
-• Only authenticated users can comment
-
-XSS PREVENTION:
-─────────────────────────────────────────────────────────────────────────────
-React automatically escapes text content:
-```javascript
-<p>{content}</p>  // Safe - React escapes HTML
-```
-
-Markdown rendering uses sanitization:
-```javascript
-import { sanitizeMarkdown } from "../../utils/helper";
-const sanitized = sanitizeMarkdown(content);
-```
-
-INPUT SANITIZATION:
-─────────────────────────────────────────────────────────────────────────────
-Backend should implement:
-• Content length limits
-• HTML tag stripping
-• SQL injection prevention (Mongoose handles this)
-• Rate limiting on comment endpoints
-
-AUTHORIZATION:
-─────────────────────────────────────────────────────────────────────────────
-• Users can only delete their own comments
-• Backend verifies comment.author === req.user._id
-• Frontend onDelete triggers confirmation modal
-
-================================================================================
-14. PERFORMANCE OPTIMIZATIONS
-================================================================================
-
-CONDITIONAL RENDERING:
-─────────────────────────────────────────────────────────────────────────────
-Avatar Images:
-```javascript
-{authorPhoto && (
-  <img src={authorPhoto} alt={authorName} />
 )}
 ```
 
-Prevents empty src warnings and unnecessary DOM elements.
+Design Features:
+• Numbered badges with gradient (purple→pink)
+• Clean white card with subtle shadow
+• Checkmark icon in header
+• Proper vertical spacing (space-y-3)
+• Aligned text with badge offset
 
-MEMOIZATION OPPORTUNITIES:
+VISUAL HIERARCHY:
 ─────────────────────────────────────────────────────────────────────────────
-Consider React.memo for CommentInfo:
+1. Header (AI SUMMARY badge + title)
+2. Summary card (gradient, more prominent)
+3. Learning points (white card, organized list)
+
+Color Strategy:
+• Purple-pink gradient: AI-generated content
+• White: Structured information
+• Amber: Errors and warnings
+• Gray: Text and borders
+
+================================================================================
+11. LOADING STATES
+================================================================================
+
+THREE-STATE SYSTEM:
+─────────────────────────────────────────────────────────────────────────────
+1. LOADING (isSummaryLoading = true)
+   • Show: Spinner + message + skeleton
+   • Hide: Summary and error
+
+2. ERROR (!isSummaryLoading && errorMsg)
+   • Show: Error card with message
+   • Hide: Summary and loading
+
+3. SUCCESS (!isSummaryLoading && !errorMsg && summaryContent)
+   • Show: Summary cards
+   • Hide: Loading and error
+
+CONDITIONAL RENDERING LOGIC:
 ```javascript
-export default React.memo(CommentInfo, (prev, next) => {
-  return prev.commentId === next.commentId &&
-         prev.replies.length === next.replies.length;
-});
+{isSummaryLoading && <LoadingState />}
+{!isSummaryLoading && errorMsg && <ErrorState />}
+{!isSummaryLoading && !errorMsg && summaryContent && <SuccessState />}
 ```
 
-LAZY LOADING:
-─────────────────────────────────────────────────────────────────────────────
-Replies are collapsed by default:
-• showSubReplies: false
-• Only render nested CommentInfo when expanded
-• Reduces initial DOM size
+Why This Works:
+• Mutually exclusive states
+• No overlapping conditions
+• Clear priority order
+• No flickering between states
 
-EFFICIENT STATE UPDATES:
+SKELETON LOADER:
 ─────────────────────────────────────────────────────────────────────────────
-Toggle pattern prevents unnecessary re-renders:
-```javascript
-setShowReplyForm(prevState => !prevState);
+Component: SkeletonLoader.jsx
+Purpose: Placeholder while AI generates content
+Features:
+• Animated shimmer effect
+• Matches expected content layout
+• Smooth transition to real content
+
+================================================================================
+12. RESPONSE FORMAT
+================================================================================
+
+EXPECTED STRUCTURE:
+─────────────────────────────────────────────────────────────────────────────
+```typescript
+interface SummaryResponse {
+  title: string;              // SEO-friendly title (max 12 words)
+  summary: string;            // Engaging 300-word summary
+  what_you_will_learn: string[];  // 3-5 key takeaways
+}
 ```
 
-API CALL OPTIMIZATION:
+EXAMPLE RESPONSE:
+```json
+{
+  "title": "Distance Learning: How Schools Adapted During the Pandemic",
+  "summary": "The COVID-19 pandemic dramatically shifted the educational landscape, forcing schools to rapidly transition to distance learning. This blog post examines how local schools navigated this unprecedented challenge. It details the initial hurdles, including technology access, teacher training, curriculum adaptation, and the crucial role of parental support. Schools employed Learning Management Systems (LMS), video conferencing tools, and digital resources to facilitate online learning. The blog also highlights the emotional toll on students, emphasizing the importance of counseling, social interaction, and well-being activities. Despite the difficulties, the experience yielded unexpected benefits, such as increased technology proficiency, enhanced parent involvement, greater flexibility, and the development of innovative teaching practices. As schools return to in-person learning, they are integrating these lessons, investing in technology, adopting blended learning models, and prioritizing social-emotional learning to create a more resilient and engaging future for education. The post concludes by emphasizing the resilience and innovation within the community and the bright future for education.",
+  "what_you_will_learn": [
+    "Challenges schools faced during the shift to distance learning.",
+    "The tools and strategies schools used to facilitate online learning.",
+    "The emotional impact of the pandemic on students and how schools addressed it.",
+    "Unexpected benefits and lessons learned from the distance learning experience.",
+    "How schools are integrating these lessons to create a more resilient future for education."
+  ]
+}
+```
+
+TYPE CHECKING:
 ─────────────────────────────────────────────────────────────────────────────
-• Single GET request fetches all comments with nested structure
-• Backend does nesting work, not frontend
-• Avoid multiple API calls for each reply level
+Frontend handles multiple response formats:
+
+```javascript
+typeof summaryContent === 'string'  // Plain string fallback
+summaryContent?.summary             // Object with summary property
+summaryContent?.what_you_will_learn // Array of learning points
+```
+
+================================================================================
+13. SECURITY & AUTHENTICATION
+================================================================================
+
+AUTHENTICATION:
+─────────────────────────────────────────────────────────────────────────────
+Route Protection:
+```javascript
+router.post('/generate-summary', protect, generatePostSummary);
+```
+
+The `protect` middleware:
+• Verifies JWT token in Authorization header
+• Extracts user from token
+• Attaches user to req.user
+• Returns 401 if invalid/missing token
+
+AUTHORIZATION:
+• Only authenticated users can generate summaries
+• Prevents API abuse
+• Tracks usage per user
+• Can implement rate limiting per user
+
+CONTENT VALIDATION:
+─────────────────────────────────────────────────────────────────────────────
+Backend validates:
+```javascript
+if (!content) {
+  return res.status(400).json({ message: "Post content is required" });
+}
+```
+
+Additional Security Measures:
+• Content length limits (prevent huge payloads)
+• Rate limiting on AI endpoint
+• Input sanitization
+• CORS configuration
+
+================================================================================
+14. PERFORMANCE CONSIDERATIONS
+================================================================================
+
+OPTIMIZATION STRATEGIES:
+─────────────────────────────────────────────────────────────────────────────
+1. IMMEDIATE DRAWER OPENING:
+   • Opens drawer before API call
+   • Better perceived performance
+   • User sees instant feedback
+
+2. SEPARATE LOADING STATE:
+   • Doesn't block page rendering
+   • Independent state management
+   • No UI conflicts
+
+3. AI MODEL SELECTION:
+   • gemini-2.0-flash-lite (faster, cheaper)
+   • Trade-off: Speed vs quality
+   • Suitable for summarization tasks
+
+4. RESPONSE CACHING (Future):
+   • Cache summaries in database
+   • Serve cached version if exists
+   • Only regenerate on content change
+
+5. LAZY LOADING:
+   • Drawer component loaded on demand
+   • Reduces initial page load
+   • Better Core Web Vitals
+
+API PERFORMANCE:
+─────────────────────────────────────────────────────────────────────────────
+Typical Response Times:
+• Short posts (500 words): 2-4 seconds
+• Medium posts (1500 words): 4-7 seconds
+• Long posts (3000+ words): 7-12 seconds
+
+Network Optimization:
+• Compress blog content before sending
+• Use HTTP/2 for multiplexing
+• CDN for static assets
 
 ================================================================================
 15. FUTURE ENHANCEMENTS
 ================================================================================
 
-FEATURE ROADMAP:
+PLANNED FEATURES:
 ─────────────────────────────────────────────────────────────────────────────
 ✓ Implemented:
-  • Top-level comments
-  • Nested replies
-  • AI-generated replies
-  • Real-time refresh
-  • Premium UI design
+  • AI-powered summarization
+  • Structured learning outcomes
+  • Premium drawer UI
+  • Error handling
+  • Loading states
 
-⏳ Planned Enhancements:
+⏳ Roadmap:
 
-1. COMMENT EDITING:
-   • Edit button for own comments
-   • Inline editor with markdown support
-   • Edit history tracking
-   • "Edited" badge with timestamp
+1. SUMMARY CACHING:
+   • Store summaries in MongoDB
+   • Link to blog post
+   • Regenerate on content update
+   • Faster load times
 
-2. COMMENT DELETION:
-   • Confirmation modal (already wired)
-   • Soft delete vs hard delete
-   • Cascade delete for nested replies
-   • Restore deleted comments
+2. SUMMARY CUSTOMIZATION:
+   • Length options (short/medium/long)
+   • Tone selection (casual/professional/technical)
+   • Target audience (beginner/intermediate/expert)
+   • Language options
 
-3. REACTIONS & LIKES:
-   • Like/upvote system
-   • Emoji reactions (👍❤️😂🎉)
-   • Reaction counts
-   • User reaction tracking
+3. SOCIAL SHARING:
+   • Share summary on social media
+   • Generate summary image card
+   • Copy summary to clipboard
+   • Email summary
 
-4. SORTING & FILTERING:
-   • Sort by: Newest, Oldest, Most Liked
-   • Filter by: All, Unread, Mentions
-   • Search within comments
+4. ANALYTICS:
+   • Track summary generation requests
+   • Measure user engagement
+   • A/B test summary formats
+   • Cost tracking per summary
 
-5. PAGINATION:
-   • Load more comments (infinite scroll)
-   • "Show more replies" for long threads
-   • Virtual scrolling for performance
+5. AUDIO SUMMARY:
+   • Text-to-speech integration
+   • Listen to summary
+   • Download audio file
+   • Accessibility enhancement
 
-6. NOTIFICATIONS:
-   • Email notifications for replies
-   • In-app notification badge
-   • Real-time updates with WebSocket
+6. MULTIPLE SUMMARIES:
+   • Generate 3 different versions
+   • Let user choose preferred style
+   • Compare summaries
+   • Voting system
 
-7. MENTIONS & TAGGING:
-   • @username autocomplete
-   • Mention notifications
-   • Clickable user tags
+7. EXPORT OPTIONS:
+   • Download as PDF
+   • Save to reading list
+   • Email to self
+   • Print-friendly format
 
-8. MARKDOWN SUPPORT:
-   • Rich text editor
-   • Markdown preview
-   • Code highlighting in comments
-   • Image uploads
+8. REAL-TIME GENERATION:
+   • WebSocket streaming
+   • Show summary as it generates
+   • Character-by-character reveal
+   • More engaging UX
 
-9. MODERATION:
-   • Report comment feature
-   • Admin moderation panel
-   • Spam detection
-   • Profanity filter
+9. MULTI-LANGUAGE SUPPORT:
+   • Detect blog post language
+   • Generate summary in same language
+   • Translation option
+   • i18n integration
 
-10. ACCESSIBILITY:
-    • ARIA labels
-    • Keyboard navigation
-    • Screen reader support
-    • Focus management
+10. SUMMARY QUALITY RATING:
+    • User feedback (👍/👎)
+    • Quality improvement loop
+    • Train custom models
+    • A/B testing
 
-11. ANALYTICS:
-    • Comment engagement metrics
-    • Average response time
-    • User participation rates
-    • Popular discussion topics
+11. COST OPTIMIZATION:
+    • Summary length based on post length
+    • Batch processing
+    • Model caching
+    • Fallback to cheaper models
 
-12. REAL-TIME COLLABORATION:
-    • WebSocket integration
-    • Live typing indicators
-    • Instant comment updates
-    • Presence detection
+12. OFFLINE SUPPORT:
+    • Service worker caching
+    • Pre-generate summaries
+    • Offline-first approach
+    • Progressive Web App
 
-TECHNICAL DEBT:
+TECHNICAL IMPROVEMENTS:
 ─────────────────────────────────────────────────────────────────────────────
-• Add PropTypes or TypeScript
-• Implement error boundaries
-• Add unit tests (Jest + React Testing Library)
-• E2E tests (Playwright/Cypress)
-• Optimize bundle size
-• Add loading skeletons for comments
-• Implement optimistic UI updates
+• TypeScript migration for type safety
+• Unit tests for summary generation
+• E2E tests for drawer interaction
+• Performance monitoring
+• Error tracking (Sentry integration)
+• A/B testing framework
+• Feature flags for gradual rollout
 
-SCALABILITY CONSIDERATIONS:
+SCALABILITY:
 ─────────────────────────────────────────────────────────────────────────────
-• Database indexing on post._id
-• Caching strategy (Redis)
-• CDN for profile images
-• Rate limiting per user
-• Comment count limits per post
+• Queue system for AI requests (Bull/Redis)
+• Worker processes for background generation
+• Load balancing for AI endpoints
+• Database indexing for cached summaries
+• CDN caching for frequently accessed summaries
 
 ================================================================================
                               END OF DOCUMENTATION
