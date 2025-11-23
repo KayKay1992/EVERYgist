@@ -1,13 +1,11 @@
 import React from "react";
 
 const Modal = ({ children, isOpen, onClose, hideHeader, title }) => {
-    if (!isOpen) return null;
+  if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-black opacity-90 ">
+    <div className="fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-black/90">
       {/* Modal Content */}
-      <div
-        className={`relative flex flex-col bg-white shadow-lg rounded-lg overflow-hidden`}
-      >
+      <div className="relative flex flex-col bg-white shadow-lg rounded-lg overflow-hidden">
         {/* Modal Header */}
         {!hideHeader && (
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
@@ -15,7 +13,11 @@ const Modal = ({ children, isOpen, onClose, hideHeader, title }) => {
           </div>
         )}
 
-        <button type="button" className="text-gray-400 bg-transparent hover:bg-sky-100 hover-gray-900 rounded-lg text-sm w-8 h-8 flex justify-center items-center absolute top-3.5 right-3.5 cursor-pointer" onClick={onClose}>
+        <button
+          type="button"
+          className="text-gray-400 bg-transparent hover:bg-sky-100 hover-gray-900 rounded-lg text-sm w-8 h-8 flex justify-center items-center absolute top-3.5 right-3.5 cursor-pointer"
+          onClick={onClose}
+        >
           <svg
             className="w-3 h-3 text-black "
             aria-hidden="true"
@@ -33,7 +35,9 @@ const Modal = ({ children, isOpen, onClose, hideHeader, title }) => {
           </svg>
         </button>
         {/* Modal Body scrollable */}
-        <div className="flex-1 overflow-y-auto custsom-scrollbar">{children}</div>
+        <div className="flex-1 overflow-y-auto custsom-scrollbar">
+          {children}
+        </div>
       </div>
     </div>
   );

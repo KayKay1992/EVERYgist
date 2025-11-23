@@ -52,7 +52,7 @@ const Navbar = ({ activeMenu }) => {
 
       {/* Mobile Side Menu */}
       {openSideMenu && (
-        <div className="fixed top-[73px] left-0 w-full bg-white/98 backdrop-blur-lg border-b border-gray-200/60 shadow-2xl shadow-purple-100/20 lg:hidden z-40">
+        <div className="fixed top-[73px] left-0 w-64 h-[calc(100vh-73px)] bg-white/95 backdrop-blur-lg border-r border-gray-200/60 shadow-2xl shadow-purple-100/20 lg:hidden z-40 overflow-y-auto">
           <SideMenu activeMenu={activeMenu} setOpenSideMenu={setOpenSideMenu} />
         </div>
       )}
