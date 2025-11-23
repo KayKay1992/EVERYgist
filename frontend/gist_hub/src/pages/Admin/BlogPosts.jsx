@@ -1,6 +1,11 @@
 import React from "react";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
-import { LuGalleryVerticalEnd, LuLoaderCircle, LuPlus } from "react-icons/lu";
+import {
+  LuGalleryVerticalEnd,
+  LuLoaderCircle,
+  LuPlus,
+  LuSparkles,
+} from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axioInstance";
 import { API_PATHS } from "../../utils/apiPaths";
@@ -86,25 +91,49 @@ const BlogPosts = () => {
   return (
     <DashboardLayout activeMenu="Blog Posts">
       <div className="w-auto sm:max-w-[900px] mx-auto">
-        <div className="flex items-center justify-between ">
-          <h2 className="text-2xl font-semibold mt-5 mb-5">Blog Posts</h2>
+        {/* Header Section with Gradient */}
+        <div className="relative overflow-hidden bg-linear-to-br from-blue-600 via-purple-600 to-pink-600 rounded-3xl shadow-2xl shadow-purple-500/30 p-8 mt-6 mb-6">
+          {/* Background Decorations */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl"></div>
 
-          <button
-            className="btn-small"
-            onClick={() => navigate("/admin/create")}
-          >
-            <LuPlus className="inline-block mr-2 text-[18px]" />
-            Create New Post
-          </button>
+          <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <LuGalleryVerticalEnd className="text-yellow-300 text-3xl" />
+                <h2 className="text-3xl md:text-4xl font-bold text-white">
+                  Blog Posts
+                </h2>
+              </div>
+              <p className="text-purple-100 text-sm md:text-base font-medium">
+                Manage and organize your content
+              </p>
+            </div>
+
+            <button
+              className="group flex items-center gap-2 bg-white text-purple-700 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+              onClick={() => navigate("/admin/create")}
+            >
+              <div className="bg-purple-100 p-1.5 rounded-lg group-hover:bg-purple-200 transition-colors">
+                <LuPlus className="text-xl" />
+              </div>
+              <span>Create New Post</span>
+              <LuSparkles className="text-yellow-500" />
+            </button>
+          </div>
         </div>
 
-        <Tabs
-          tabs={tabs}
-          activeTab={filterStatus}
-          setActiveTab={setFilterStatus}
-        />
+        {/* Tabs Section */}
+        <div className="mb-6">
+          <Tabs
+            tabs={tabs}
+            activeTab={filterStatus}
+            setActiveTab={setFilterStatus}
+          />
+        </div>
 
-        <div className="mt-5">
+        {/* Posts Grid */}
+        <div className="space-y-4">
           {blogPostList.map((post) => (
             <BlogPostSummaryCard
               key={post._id}
@@ -125,24 +154,69 @@ const BlogPosts = () => {
             />
           ))}
 
+          {/* Load More Button */}
           {page < totalPages && (
-            <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center justify-center py-8">
               <button
-                className="flex items-center gap-3 text-sm text-white font-medium bg-black px-7 py-2 rounded-md hover:bg-gray-900 text-nowrap disabled:bg-gray-400 cursor-pointer hover:scale-105 transition-all"
+                className="group flex items-center gap-3 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 onClick={handleLoadMore}
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <LuLoaderCircle className="animate-spin text-2xl text-amber-700" />
+                  <>
+                    <LuLoaderCircle className="animate-spin text-2xl" />
+                    <span>Loading...</span>
+                  </>
                 ) : (
-                  <LuGalleryVerticalEnd className="text-2xl" />
-                )}{" "}
-                {isLoading ? "Loading..." : "Load More Posts"}
+                  <>
+                    <LuGalleryVerticalEnd className="text-2xl" />
+                    <span>Load More Posts</span>
+                    <svg
+                      className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 8l4 4m0 0l-4 4m4-4H3"
+                      />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!isLoading && blogPostList.length === 0 && (
+            <div className="text-center py-16">
+              <div className="w-24 h-24 mx-auto mb-6 bg-linear-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center">
+                <LuGalleryVerticalEnd className="w-12 h-12 text-purple-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                No posts found
+              </h3>
+              <p className="text-gray-500 mb-6">
+                {filterStatus === "All"
+                  ? "Start creating your first blog post!"
+                  : `No ${filterStatus.toLowerCase()} posts available.`}
+              </p>
+              <button
+                className="flex items-center gap-2 bg-linear-to-r from-purple-600 to-pink-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 mx-auto"
+                onClick={() => navigate("/admin/create")}
+              >
+                <LuPlus className="text-xl" />
+                Create Your First Post
               </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Delete Modal */}
       <Modal
         isOpen={openDeleteAlert?.open}
         onClose={() => setOpenDeleteAlert({ open: false, data: null })}
