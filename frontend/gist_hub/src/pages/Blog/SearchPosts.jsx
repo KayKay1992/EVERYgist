@@ -19,14 +19,21 @@ const SearchPosts = () => {
   const handleSearch = async () => {
     try {
       setIsLoading(true);
+      console.log("🔍 Searching for:", query);
       const response = await axiosInstance.get(API_PATHS.POSTS.SEARCH, {
         params: { q: query },
       });
+      console.log("📦 Search response:", response.data);
       if (response.data) {
         setSearchResults(response.data || []);
+        console.log("✅ Search results set. Count:", response.data.length);
+        console.log(
+          "📝 Results:",
+          response.data.map((r) => ({ id: r._id, title: r.title }))
+        );
       }
     } catch (error) {
-      console.error("Error searching posts:", error);
+      console.error("❌ Error searching posts:", error);
     } finally {
       setIsLoading(false);
     }
@@ -127,15 +134,7 @@ const SearchPosts = () => {
                   {/* Posts Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {searchResults.map((item, index) => (
-                      <div
-                        key={item._id}
-                        style={{
-                          animationDelay: `${index * 100}ms`,
-                          animation: "fadeInUp 0.6s ease-out forwards",
-                          opacity: 0,
-                        }}
-                        onClick={() => handleClick(item)}
-                      >
+                      <div key={item._id} onClick={() => handleClick(item)}>
                         <BlogPostSummary
                           post={item}
                           title={item.title}
@@ -224,20 +223,6 @@ const SearchPosts = () => {
           </div>
         </div>
       </div>
-
-      {/* Animations */}
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </BlogLayout>
   );
 };

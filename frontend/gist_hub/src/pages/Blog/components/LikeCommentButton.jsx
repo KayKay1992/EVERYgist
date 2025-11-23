@@ -13,7 +13,9 @@ const LikeCommentButton = ({ likes, comments, postId }) => {
     if (!postId) return;
 
     try {
-      const response = await axiosInstance.post(API_PATHS.POSTS.LIKE_POST(postId));
+      const response = await axiosInstance.post(
+        API_PATHS.POSTS.LIKE_POST(postId)
+      );
       if (response.data) {
         setPostLikes((prevState) => prevState + 1);
         setLiked(true);
@@ -133,22 +135,6 @@ const LikeCommentButton = ({ likes, comments, postId }) => {
           </button>
         </div>
       </div>
-
-      {/* Floating Animation */}
-      <style jsx>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-10px);
-          }
-        }
-        .group:hover {
-          animation: float 3s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 };

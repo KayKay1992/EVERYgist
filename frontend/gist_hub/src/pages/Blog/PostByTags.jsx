@@ -132,17 +132,9 @@ const PostByTags = () => {
                   </div>
 
                   {/* Posts Grid */}
-                  <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {blogPostList.map((item, index) => (
-                      <div
-                        key={item._id}
-                        className="transform transition-all duration-300 hover:scale-[1.02]"
-                        style={{
-                          animationDelay: `${index * 100}ms`,
-                          animation: "fadeInUp 0.6s ease-out forwards",
-                          opacity: 0,
-                        }}
-                      >
+                      <div key={item._id} onClick={() => handleClick(item)}>
                         <BlogPostSummary
                           title={item.title}
                           coverImageUrl={item.coverImageUrl}
@@ -228,20 +220,6 @@ const PostByTags = () => {
             </div>
           </div>
         </div>
-
-        {/* CSS Animation */}
-        <style jsx>{`
-          @keyframes fadeInUp {
-            from {
-              opacity: 0;
-              transform: translateY(30px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}</style>
       </div>
     </BlogLayout>
   );
