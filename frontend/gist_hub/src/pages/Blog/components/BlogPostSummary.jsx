@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { calculateReadingTime } from "../../../utils/helper";
 
 const BlogPostSummary = ({
   title,
@@ -10,6 +11,7 @@ const BlogPostSummary = ({
   authorName,
   authorProfileImg,
   onClick,
+  content = "",
 }) => {
   const navigate = useNavigate();
   return (
@@ -43,7 +45,9 @@ const BlogPostSummary = ({
               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span className="text-xs font-semibold text-gray-700">3 min</span>
+          <span className="text-xs font-semibold text-gray-700">
+            {calculateReadingTime(content)} min
+          </span>
         </div>
       </div>
 

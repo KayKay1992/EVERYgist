@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import MarkdownContent from "./components/MarkdownContent";
 import SharePost from "./components/SharePost";
-import { sanitizeMarkdown } from "../../utils/helper";
+import { sanitizeMarkdown, calculateReadingTime } from "../../utils/helper";
 import CommentInfo from "./components/CommentInfo";
 import Drawer from "../../components/Drawer";
 import LikeCommentButton from "./components/LikeCommentButton";
@@ -226,7 +226,7 @@ const BlogpostView = () => {
                           />
                         </svg>
                         <span className="font-medium">
-                          {blogPostData.readingTime || 0} min read
+                          {calculateReadingTime(blogPostData.content)} min read
                         </span>
                       </div>
 

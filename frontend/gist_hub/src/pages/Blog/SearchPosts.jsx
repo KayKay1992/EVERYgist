@@ -136,6 +136,7 @@ const SearchPosts = () => {
                     {searchResults.map((item, index) => (
                       <div key={item._id} onClick={() => handleClick(item)}>
                         <BlogPostSummary
+                          content={item.content}
                           post={item}
                           title={item.title}
                           coverImageUrl={item.coverImageUrl}

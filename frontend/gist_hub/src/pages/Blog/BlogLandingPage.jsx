@@ -147,6 +147,7 @@ const BlogLandingPage = () => {
                     title={item.title}
                     coverImageUrl={item.coverImageUrl}
                     description={item.content}
+                    content={item.content}
                     tags={item.tags}
                     authorName={item.author.name}
                     authorProfileImg={item.author.profileImageUrl}

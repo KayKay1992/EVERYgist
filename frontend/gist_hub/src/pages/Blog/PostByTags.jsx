@@ -136,6 +136,7 @@ const PostByTags = () => {
                     {blogPostList.map((item, index) => (
                       <div key={item._id} onClick={() => handleClick(item)}>
                         <BlogPostSummary
+                          content={item.content}
                           title={item.title}
                           coverImageUrl={item.coverImageUrl}
                           description={item.content}
