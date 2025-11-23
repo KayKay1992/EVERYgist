@@ -4,8 +4,9 @@ import axiosInstance from "../../../utils/axioInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import clsx from "clsx";
 import { useState } from "react";
+import BookmarkButton from "../../../components/BookmarkButton";
 
-const LikeCommentButton = ({ likes, comments, postId }) => {
+const LikeCommentButton = ({ likes, comments, postId, post }) => {
   const [postLikes, setPostLikes] = useState(likes || 0);
   const [liked, setLiked] = useState(false);
 
@@ -96,6 +97,22 @@ const LikeCommentButton = ({ likes, comments, postId }) => {
           <div className="h-px w-full bg-linear-to-r from-transparent via-purple-300 to-transparent"></div>
           <div className="absolute w-2 h-2 rounded-full bg-linear-to-r from-purple-400 to-pink-400 shadow-lg"></div>
         </div>
+
+        {/* Bookmark Button */}
+        {post && (
+          <>
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-linear-to-r from-amber-600 via-yellow-500 to-orange-600 rounded-full opacity-0 group-hover:opacity-75 blur-lg transition duration-500 group-hover:duration-300 animate-pulse"></div>
+              <BookmarkButton post={post} variant="floating" />
+            </div>
+
+            {/* Decorative Divider */}
+            <div className="relative flex items-center justify-center py-1">
+              <div className="h-px w-full bg-linear-to-r from-transparent via-amber-300 to-transparent"></div>
+              <div className="absolute w-2 h-2 rounded-full bg-linear-to-r from-amber-400 to-orange-400 shadow-lg"></div>
+            </div>
+          </>
+        )}
 
         {/* Comment Button */}
         <div className="relative group">

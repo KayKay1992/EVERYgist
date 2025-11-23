@@ -75,24 +75,6 @@ const Drawer = ({ isOpen, onClose, title, children }) => {
         {/* Footer Gradient */}
         <div className="absolute bottom-0 left-0 w-full h-20 bg-linear-to-t from-white via-white/80 to-transparent pointer-events-none"></div>
       </div>
-
-      {/* Custom Scrollbar Styles */}
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, #9333ea, #db2777);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, #7e22ce, #be185d);
-        }
-      `}</style>
     </>
   );
 };

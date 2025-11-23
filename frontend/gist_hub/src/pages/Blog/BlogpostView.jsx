@@ -273,6 +273,13 @@ const BlogpostView = () => {
                     postId={blogPostData._id || ""}
                     likes={blogPostData.likes || 0}
                     comments={comments?.length || 0}
+                    post={{
+                      id: blogPostData._id,
+                      title: blogPostData.title,
+                      slug: blogPostData.slug,
+                      coverImageUrl: blogPostData.coverImageUrl,
+                      tags: blogPostData.tags,
+                    }}
                   />
                   {/* Trending Posts Sidebar - Takes 1/3 on large screens */}
                   <div className="lg:col-span-1">

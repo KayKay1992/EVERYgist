@@ -10,6 +10,7 @@ import {
   LuNewspaper,
   LuTrophy,
   LuRocket,
+  LuBookmark,
 } from "react-icons/lu";
 
 export const SIDE_MENU_DATA = [
@@ -48,42 +49,48 @@ export const BLOG_NAVBAR_DATA = [
   },
   {
     id: "02",
+    label: "Saved Posts",
+    icon: LuBookmark,
+    path: "/saved",
+  },
+  {
+    id: "03",
     label: "Education",
     icon: LuGraduationCap,
     path: "/tag/Education",
   },
   {
-    id: "03",
+    id: "04",
     label: "Technology",
     icon: LuLaptop,
     path: "/tag/Technology",
   },
   {
-    id: "04",
+    id: "05",
     label: "Politics",
     icon: LuLandmark,
     path: "/tag/Politics",
   },
   {
-    id: "05",
+    id: "06",
     label: "Lifestyle",
     icon: LuHeart,
     path: "/tag/Lifestyle",
   },
   {
-    id: "06",
+    id: "07",
     label: "News",
     icon: LuNewspaper,
     path: "/tag/News",
   },
   {
-    id: "07",
+    id: "08",
     label: "Sports",
     icon: LuTrophy,
     path: "/tag/Sports",
   },
   {
-    id: "08",
+    id: "09",
     label: "Startup",
     icon: LuRocket,
     path: "/tag/Startup",
