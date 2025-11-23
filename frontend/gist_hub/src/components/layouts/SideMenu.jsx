@@ -27,7 +27,7 @@ const SideMenu = ({ activeMenu, isBlogMenu, setOpenSideMenu }) => {
     navigate("/");
   };
   return (
-    <div className="w-full h-full bg-white border-r border-purple-100/50 p-6 overflow-y-auto">
+    <div className="w-64 h-screen bg-white border-r border-purple-100/50 p-6 overflow-y-scroll overflow-x-hidden">
       {/* Decorative Elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-purple-400/10 to-transparent rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-linear-to-tr from-pink-400/10 to-transparent rounded-full blur-2xl"></div>
@@ -71,31 +71,38 @@ const SideMenu = ({ activeMenu, isBlogMenu, setOpenSideMenu }) => {
 
       {/* Menu Items */}
       <nav className="relative space-y-2">
-        {(isBlogMenu ? BLOG_NAVBAR_DATA : SIDE_MENU_DATA).map((item, index) => (
-          <button
-            key={`menu_${index}`}
-            className={`group w-full flex items-center gap-3 text-[15px] font-semibold py-3 px-4 rounded-xl transition-all duration-300 ${
-              activeMenu === item.label || activeMenu === item.id
-                ? "bg-linear-to-r from-purple-600 via-pink-600 to-purple-600 text-white shadow-lg shadow-purple-500/50 scale-105"
-                : "text-gray-700 hover:bg-white/80 hover:text-purple-600 hover:shadow-md hover:scale-102"
-            }`}
-            onClick={() => handleClick(item.path)}
-          >
-            <div
-              className={`p-2 rounded-lg transition-all duration-300 ${
+        {(isBlogMenu ? BLOG_NAVBAR_DATA : SIDE_MENU_DATA).map((item, index) => {
+          // Skip profile menu if user is not logged in
+          if (item.id === "profile" && !user) {
+            return null;
+          }
+
+          return (
+            <button
+              key={`menu_${index}`}
+              className={`group w-full flex items-center gap-3 text-[15px] font-semibold py-3 px-4 rounded-xl transition-all duration-300 ${
                 activeMenu === item.label || activeMenu === item.id
-                  ? "bg-white/20"
-                  : "bg-purple-50 group-hover:bg-purple-100"
+                  ? "bg-linear-to-r from-purple-600 via-pink-600 to-purple-600 text-white shadow-lg shadow-purple-500/50 scale-105"
+                  : "text-gray-700 hover:bg-white/80 hover:text-purple-600 hover:shadow-md hover:scale-102"
               }`}
+              onClick={() => handleClick(item.path)}
             >
-              <item.icon className="text-xl" />
-            </div>
-            <span className="flex-1 text-left">{item.label}</span>
-            {(activeMenu === item.label || activeMenu === item.id) && (
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            )}
-          </button>
-        ))}
+              <div
+                className={`p-2 rounded-lg transition-all duration-300 ${
+                  activeMenu === item.label || activeMenu === item.id
+                    ? "bg-white/20"
+                    : "bg-purple-50 group-hover:bg-purple-100"
+                }`}
+              >
+                <item.icon className="text-xl" />
+              </div>
+              <span className="flex-1 text-left">{item.label}</span>
+              {(activeMenu === item.label || activeMenu === item.id) && (
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              )}
+            </button>
+          );
+        })}
       </nav>
 
       {/* Logout Button */}

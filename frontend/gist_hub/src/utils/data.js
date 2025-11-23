@@ -11,6 +11,7 @@ import {
   LuTrophy,
   LuRocket,
   LuBookmark,
+  LuUser,
 } from "react-icons/lu";
 
 export const SIDE_MENU_DATA = [
@@ -32,6 +33,12 @@ export const SIDE_MENU_DATA = [
     icon: LuMessageSquareQuote,
     path: "/admin/comments",
   },
+  {
+    id: "profile",
+    label: "My Profile",
+    icon: LuUser,
+    path: "/profile",
+  },
   // {
   //     id: '04',
   //     label: 'Tags',
@@ -52,6 +59,13 @@ export const BLOG_NAVBAR_DATA = [
     label: "Saved Posts",
     icon: LuBookmark,
     path: "/saved",
+  },
+  {
+    id: "profile",
+    label: "My Profile",
+    icon: LuUser,
+    path: "/profile",
+    onlySideMenu: true,
   },
   {
     id: "03",

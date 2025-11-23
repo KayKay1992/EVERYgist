@@ -1,12 +1,16 @@
 import React from "react";
 import { HiOutlineMenu, HiOutlineX } from "react-icons/hi";
 import SideMenu from "./SideMenu";
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { UserContext } from "../../context/userContext";
+import ProfileInfoCard from "../Cards/ProfileInfoCard";
 
 import LOGO from "../../assets/logo.svg";
 
 const Navbar = ({ activeMenu }) => {
   const [openSideMenu, setOpenSideMenu] = useState(false);
+  const { user } = useContext(UserContext);
+
   return (
     <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/60 shadow-sm">
       {/* Gradient accent line */}
@@ -41,8 +45,14 @@ const Navbar = ({ activeMenu }) => {
           </div>
         </div>
 
-        {/* Right section - Live indicator */}
-        <div className="flex items-center gap-3">
+        {/* Right section - Profile & Live indicator */}
+        <div className="flex items-center gap-4">
+          {user && (
+            <div className="hidden md:block">
+              <ProfileInfoCard />
+            </div>
+          )}
+
           <div className="hidden md:flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <span className="text-xs text-gray-600 font-medium">Live</span>

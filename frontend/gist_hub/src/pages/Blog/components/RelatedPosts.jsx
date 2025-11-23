@@ -19,17 +19,28 @@ const RelatedPosts = ({ currentPostId, tags = [] }) => {
   const fetchRelatedPosts = async () => {
     try {
       setIsLoading(true);
-      // Fetch posts by the first tag
-      const primaryTag = tags[0];
-      const response = await axiosInstance.get(
-        API_PATHS.POSTS.GET_BY_TAG(primaryTag)
-      );
+      // Fetch all published posts
+      const response = await axiosInstance.get(API_PATHS.POSTS.GET_ALL, {
+        params: {
+          status: "published",
+          limit: 100,
+        },
+      });
 
-      if (response.data) {
-        // Filter out current post and limit to 3 posts
-        const filtered = response.data
-          .filter((post) => post._id !== currentPostId)
+      if (response.data?.posts) {
+        // Filter posts that share at least one tag with the current post
+        const filtered = response.data.posts
+          .filter((post) => {
+            // Exclude current post
+            if (post._id === currentPostId) return false;
+
+            // Check if post has any matching tags
+            const hasMatchingTag = post.tags?.some((tag) => tags.includes(tag));
+            return hasMatchingTag;
+          })
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // Sort by newest first
           .slice(0, 3);
+
         setRelatedPosts(filtered);
       }
     } catch (error) {

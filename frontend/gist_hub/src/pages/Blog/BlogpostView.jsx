@@ -67,7 +67,11 @@ const BlogpostView = () => {
       );
       if (response.data) {
         const data = response.data;
-        setComments(data);
+        // Sort comments by newest first
+        const sortedComments = data.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        setComments(sortedComments);
       }
     } catch (error) {
       console.error("Error fetching comments by post ID:", error);

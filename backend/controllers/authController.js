@@ -73,14 +73,14 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({email});
-    if(!user){
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(500).json({ message: "Invalid email or password" });
     }
 
     //TODO: Verify password
     const isMatch = await bcrypt.compare(password, user.password);
-    if(!isMatch){
+    if (!isMatch) {
       return res.status(500).json({ message: "Invalid email or password" });
     }
 
@@ -93,7 +93,7 @@ const loginUser = async (req, res) => {
       bio: user.bio,
       role: user.role,
       token: generateToken(user._id),
-    })
+    });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
@@ -114,4 +114,102 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getUserProfile };
+//@desc    Update user profile
+//@route   PUT /api/auth/profile
+//@access  Private
+const updateUserProfile = async (req, res) => {
+  try {
+    const { name, bio, profileImageUrl } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update fields
+    if (name) user.name = name;
+    if (bio !== undefined) user.bio = bio;
+    if (profileImageUrl) user.profileImageUrl = profileImageUrl;
+
+    await user.save();
+
+    // Return updated user without password
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      profileImageUrl: user.profileImageUrl,
+      bio: user.bio,
+      role: user.role,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+//@desc    Change user password
+//@route   PUT /api/auth/change-password
+//@access  Private
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+//@desc    Get user's own comments
+//@route   GET /api/auth/my-comments
+//@access  Private
+const getUserComments = async (req, res) => {
+  try {
+    const Comment = require("../models/Comment");
+
+    const comments = await Comment.find({ author: req.user.id })
+      .populate("post", "title slug")
+      .populate("author", "name profileImageUrl")
+      .sort({ createdAt: -1 });
+
+    res.json(comments);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  changePassword,
+  getUserComments,
+};

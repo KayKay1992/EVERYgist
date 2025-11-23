@@ -5,6 +5,9 @@ export const API_PATHS = {
     REGISTER: `/api/auth/register`, //Signup
     LOGIN: `/api/auth/login`, //Login
     GET_PROFILE: `/api/auth/profile`, //Get user profile
+    UPDATE_PROFILE: `/api/auth/profile`, //Update user profile
+    CHANGE_PASSWORD: `/api/auth/change-password`, //Change password
+    MY_COMMENTS: `/api/auth/my-comments`, //Get user's own comments
   },
   IMAGE: {
     UPLOAD_IMAGE: `/api/auth/upload-image`, //Upload profile image

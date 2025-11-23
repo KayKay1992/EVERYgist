@@ -5,6 +5,7 @@ import BlogpostView from "./pages/Blog/BlogpostView";
 import PostByTags from "./pages/Blog/PostByTags";
 import SearchPosts from "./pages/Blog/SearchPosts";
 import SavedPosts from "./pages/Blog/SavedPosts";
+import Profile from "./pages/Blog/Profile";
 import AdminLogin from "./pages/Admin/AdminLogin";
 import PrivateRoutes from "./routes/PrivateRoutes";
 import Dashboard from "./pages/Admin/Dashboard";
@@ -25,6 +26,7 @@ const App = () => {
             <Route path="/tag/:tagName" element={<PostByTags />} />
             <Route path="/search" element={<SearchPosts />} />
             <Route path="/saved" element={<SavedPosts />} />
+            <Route path="/profile" element={<Profile />} />
 
             {/* Admin Route */}
             <Route element={<PrivateRoutes allowedRoles={["admin"]} />}>
