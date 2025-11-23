@@ -5,6 +5,7 @@ import { API_PATHS } from "../../../utils/apiPaths";
 import clsx from "clsx";
 import { useState } from "react";
 import BookmarkButton from "../../../components/BookmarkButton";
+import FontSizeControl from "../../../components/FontSizeControl";
 
 const LikeCommentButton = ({ likes, comments, postId, post }) => {
   const [postLikes, setPostLikes] = useState(likes || 0);
@@ -31,8 +32,8 @@ const LikeCommentButton = ({ likes, comments, postId, post }) => {
     }
   };
   return (
-    <div className="fixed bottom-8 right-8 z-40">
-      <div className="flex flex-col gap-4">
+    <div className="fixed bottom-4 md:bottom-6 xl:bottom-8 right-2 md:right-4 xl:right-8 z-40 scale-75 md:scale-90 xl:scale-100">
+      <div className="flex flex-col gap-2 md:gap-3 xl:gap-4">
         {/* Like Button */}
         <div className="relative group">
           {/* Animated Glow Effect */}
@@ -113,6 +114,18 @@ const LikeCommentButton = ({ likes, comments, postId, post }) => {
             </div>
           </>
         )}
+
+        {/* Font Size Control */}
+        <div className="relative group">
+          <div className="absolute -inset-1 bg-linear-to-r from-indigo-600 via-violet-500 to-purple-600 rounded-full opacity-0 group-hover:opacity-75 blur-lg transition duration-500 group-hover:duration-300 animate-pulse"></div>
+          <FontSizeControl variant="floating" />
+        </div>
+
+        {/* Decorative Divider */}
+        <div className="relative flex items-center justify-center py-1">
+          <div className="h-px w-full bg-linear-to-r from-transparent via-indigo-300 to-transparent"></div>
+          <div className="absolute w-2 h-2 rounded-full bg-linear-to-r from-indigo-400 to-violet-400 shadow-lg"></div>
+        </div>
 
         {/* Comment Button */}
         <div className="relative group">

@@ -308,7 +308,7 @@ const BlogpostView = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-purple-100/30 rounded-full blur-3xl z-0"></div>
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-pink-100/30 rounded-full blur-3xl z-0"></div>
 
-                    <div className="relative z-10">
+                    <div className="relative z-10 blog-content">
                       <MarkdownContent
                         content={sanitizeMarkdown(blogPostData?.content || "")}
                       />
