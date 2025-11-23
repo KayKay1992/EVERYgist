@@ -19,6 +19,7 @@ import { sanitizeMarkdown } from "../../utils/helper";
 import CommentInfo from "./components/CommentInfo";
 import Drawer from "../../components/Drawer";
 import LikeCommentButton from "./components/LikeCommentButton";
+import RelatedPosts from "./components/RelatedPosts";
 
 const BlogpostView = () => {
   const { slug } = useParams();
@@ -266,15 +267,13 @@ const BlogpostView = () => {
                         />
                       )}
                     </div>
-
-
                   </div>
 
                   <LikeCommentButton
-                     postId={blogPostData._id || ""}
-                     likes={blogPostData.likes || 0}
-                     comments={comments?.length || 0}
-                    />
+                    postId={blogPostData._id || ""}
+                    likes={blogPostData.likes || 0}
+                    comments={comments?.length || 0}
+                  />
                   {/* Trending Posts Sidebar - Takes 1/3 on large screens */}
                   <div className="lg:col-span-1">
                     <div className="sticky top-24 space-y-6">
@@ -313,6 +312,12 @@ const BlogpostView = () => {
                   <div className="mt-12 bg-linear-to-r from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-100">
                     <SharePost title={blogPostData.title} />
                   </div>
+
+                  {/* Related Posts Section */}
+                  <RelatedPosts
+                    currentPostId={blogPostData._id}
+                    tags={blogPostData.tags || []}
+                  />
 
                   {/* Comments Section */}
                   <div className="mt-12 relative">
