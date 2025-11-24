@@ -91,16 +91,27 @@ const MarkdownContent = ({ content }) => {
             },
 
             h1({ children }) {
+              const id = String(children)
+                .toLowerCase()
+                .replace(/[^\w\s-]/g, "")
+                .replace(/\s+/g, "-");
               return (
-                <h1 className="text-4xl font-extrabold mt-12 mb-6 bg-linear-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent leading-tight">
+                <h1
+                  id={id}
+                  className="text-4xl font-extrabold mt-12 mb-6 bg-linear-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent leading-tight scroll-mt-24"
+                >
                   {children}
                 </h1>
               );
             },
 
             h2({ children }) {
+              const id = String(children)
+                .toLowerCase()
+                .replace(/[^\w\s-]/g, "")
+                .replace(/\s+/g, "-");
               return (
-                <div className="mt-12 mb-6">
+                <div id={id} className="mt-12 mb-6 scroll-mt-24">
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">
                     {children}
                   </h2>
@@ -110,8 +121,15 @@ const MarkdownContent = ({ content }) => {
             },
 
             h3({ children }) {
+              const id = String(children)
+                .toLowerCase()
+                .replace(/[^\w\s-]/g, "")
+                .replace(/\s+/g, "-");
               return (
-                <h3 className="text-2xl font-bold mt-10 mb-4 text-gray-900 flex items-center gap-3">
+                <h3
+                  id={id}
+                  className="text-2xl font-bold mt-10 mb-4 text-gray-900 flex items-center gap-3 scroll-mt-24"
+                >
                   <span className="w-1.5 h-6 bg-linear-to-b from-purple-500 to-pink-500 rounded-full"></span>
                   {children}
                 </h3>
@@ -119,8 +137,15 @@ const MarkdownContent = ({ content }) => {
             },
 
             h4({ children }) {
+              const id = String(children)
+                .toLowerCase()
+                .replace(/[^\w\s-]/g, "")
+                .replace(/\s+/g, "-");
               return (
-                <h4 className="text-xl font-semibold mt-8 mb-3 text-gray-800">
+                <h4
+                  id={id}
+                  className="text-xl font-semibold mt-8 mb-3 text-gray-800 scroll-mt-24"
+                >
                   {children}
                 </h4>
               );
