@@ -26,6 +26,7 @@ dist-ssr
 
 # Deployment documentation
 FRONTEND_DEPLOYMENT.md
+CLOUDINARY_SETUP.md
 
 
 

@@ -28,29 +28,22 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // Optimize the uploaded image
-    const optimizationResults = await optimizeImage(req.file.path);
-
-    // Return URLs for all image variants
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const getRelativePath = (fullPath) =>
-      fullPath.replace(/\\/g, "/").split("uploads/")[1];
+    // Cloudinary automatically handles optimization and returns the URL
+    // req.file.path contains the Cloudinary URL
+    const cloudinaryUrl = req.file.path;
 
     res.status(200).json({
-      imageUrl: `${baseUrl}/uploads/${getRelativePath(
-        optimizationResults.optimized
-      )}`,
-      original: `${baseUrl}/uploads/${getRelativePath(
-        optimizationResults.original
-      )}`,
-      webp: `${baseUrl}/uploads/${getRelativePath(optimizationResults.webp)}`,
-      thumbnail: `${baseUrl}/uploads/${getRelativePath(
-        optimizationResults.thumbnail
-      )}`,
-      thumbnailWebp: `${baseUrl}/uploads/${getRelativePath(
-        optimizationResults.thumbnailWebp
-      )}`,
-      metadata: optimizationResults.metadata,
+      imageUrl: cloudinaryUrl, // Main optimized image URL
+      original: cloudinaryUrl,
+      webp: cloudinaryUrl, // Cloudinary auto-serves WebP when supported
+      thumbnail: cloudinaryUrl, // Use transformations in frontend if needed
+      thumbnailWebp: cloudinaryUrl,
+      metadata: {
+        width: req.file.width,
+        height: req.file.height,
+        format: req.file.format,
+        size: req.file.size,
+      },
     });
   } catch (error) {
     console.error("Error processing image:", error);

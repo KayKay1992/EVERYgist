@@ -27,6 +27,9 @@ const sitemapRoutes = require("./routes/sitemapRoutes");
 
 const app = express();
 
+// Trust proxy - important for Render deployment to properly detect HTTPS
+app.set("trust proxy", 1);
+
 // Allowed origins for CORS
 const allowedOrigins = [
   "https://gisthub-lyac.onrender.com", // Your frontend URL
