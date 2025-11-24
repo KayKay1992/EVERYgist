@@ -3,6 +3,7 @@ import { LuCopy, LuCheck, LuCode, LuQuote } from "react-icons/lu";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState } from "react";
+import LazyImage from "../../../components/LazyImage";
 
 const MarkdownContent = ({ content }) => {
   if (!content) return <p>No content available.</p>;
@@ -216,7 +217,7 @@ const MarkdownContent = ({ content }) => {
             img({ src, alt }) {
               return (
                 <div className="my-8 rounded-xl overflow-hidden shadow-lg border border-gray-200">
-                  <img src={src} alt={alt} className="w-full h-auto" />
+                  <LazyImage src={src} alt={alt} className="w-full h-auto" />
                 </div>
               );
             },

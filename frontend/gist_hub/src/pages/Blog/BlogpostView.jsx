@@ -21,6 +21,7 @@ import Drawer from "../../components/Drawer";
 import LikeCommentButton from "./components/LikeCommentButton";
 import RelatedPosts from "./components/RelatedPosts";
 import TableOfContents from "./components/TableOfContents";
+import LazyImage from "../../components/LazyImage";
 
 const BlogpostView = () => {
   const { slug } = useParams();
@@ -265,7 +266,7 @@ const BlogpostView = () => {
                       <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                       <div className="absolute -inset-0.5 bg-linear-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
                       {blogPostData.coverImageUrl && (
-                        <img
+                        <LazyImage
                           src={blogPostData.coverImageUrl}
                           alt={blogPostData.title}
                           className="relative w-full h-full max-h-[500px] object-cover transform group-hover:scale-105 transition-transform duration-700"

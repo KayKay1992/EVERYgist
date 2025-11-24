@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateReadingTime } from "../../../utils/helper";
+import LazyImage from "../../../components/LazyImage";
 
 const BlogPostSummary = ({
   title,
@@ -25,7 +26,7 @@ const BlogPostSummary = ({
       {/* Image Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-linear-to-t from-black/50 via-black/10 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        <img
+        <LazyImage
           src={coverImageUrl}
           alt={title}
           className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-110"
