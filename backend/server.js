@@ -41,6 +41,29 @@ connectDB();
 // Middleware to parse JSON requests
 app.use(express.json());
 
+// Welcome route
+app.get("/", (req, res) => {
+  res.json({
+    message: "🚀 Gist Hub API is running!",
+    status: "healthy",
+    version: "1.0.0",
+    endpoints: {
+      posts: "/api/posts",
+      comments: "/api/comments",
+      auth: "/api/auth",
+      dashboard: "/api/dashboard-summary",
+      ai: "/api/ai",
+      sitemap: "/api/sitemap.xml",
+      robots: "/api/robots.txt",
+    },
+  });
+});
+
+// Health check route
+app.get("/health", (req, res) => {
+  res.json({ status: "OK", timestamp: new Date().toISOString() });
+});
+
 // Routes
 app.use("/api/posts", blogPostRoutes);
 app.use("/api/comments", commentRoutes);
