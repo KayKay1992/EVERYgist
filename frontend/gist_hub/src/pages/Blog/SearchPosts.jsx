@@ -7,6 +7,7 @@ import moment from "moment";
 import BlogPostSummary from "./components/BlogPostSummary";
 import TrendingPostsSection from "./components/TrendingPostsSection";
 import { LuSearch, LuFileText, LuSparkles } from "react-icons/lu";
+import SEO from "../../components/SEO";
 
 const SearchPosts = () => {
   const [searchParams] = useSearchParams();
@@ -51,6 +52,16 @@ const SearchPosts = () => {
   }, [query]);
   return (
     <BlogLayout>
+      <SEO
+        title={query ? `Search Results for "${query}"` : "Search"}
+        description={
+          query
+            ? `Search results for ${query} on Gist Hub. Find articles, tutorials, and insights.`
+            : "Search for articles, tutorials, and stories on Gist Hub."
+        }
+        url={query ? `/search?query=${encodeURIComponent(query)}` : "/search"}
+      />
+
       <div className="min-h-screen">
         {/* Hero Section */}
         <div className="relative overflow-hidden bg-white border-b border-gray-200 mb-12">

@@ -23,6 +23,7 @@ const commentRoutes = require("./routes/commentRoutes");
 const authRoutes = require("./routes/authRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const sitemapRoutes = require("./routes/sitemapRoutes");
 
 const app = express();
 // Middleware to handle cors issues
@@ -46,6 +47,7 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard-summary", dashboardRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api", sitemapRoutes); // Sitemap and robots.txt routes
 
 //serve uploads folder as static
 app.use("/uploads", express.static(path.join(__dirname, "uploads"), {}));

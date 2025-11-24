@@ -9,6 +9,7 @@ import moment from "moment";
 import TrendingPostsSection from "./components/TrendingPostsSection";
 import { LuTag, LuSearch, LuBookmark } from "react-icons/lu";
 import { BLOG_NAVBAR_DATA } from "../../utils/data";
+import SEO from "../../components/SEO";
 
 const PostByTags = () => {
   const { tagName } = useParams();
@@ -50,6 +51,13 @@ const PostByTags = () => {
 
   return (
     <BlogLayout activeMenu={activeMenuId}>
+      <SEO
+        title={`${tagName} Posts`}
+        description={`Explore articles and tutorials about ${tagName}. Find insightful content on ${tagName} and related topics.`}
+        url={`/tag/${tagName}`}
+        keywords={[tagName, "blog", "articles", "tutorials"]}
+      />
+
       <div className="min-h-screen bg-linear-to-br from-gray-50 via-purple-50/20 to-pink-50/20">
         {/* Hero Section with Tag Header */}
         <div className="relative overflow-hidden bg-white border-b border-gray-200">

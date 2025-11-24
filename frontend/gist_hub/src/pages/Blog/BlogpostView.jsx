@@ -22,6 +22,7 @@ import LikeCommentButton from "./components/LikeCommentButton";
 import RelatedPosts from "./components/RelatedPosts";
 import TableOfContents from "./components/TableOfContents";
 import LazyImage from "../../components/LazyImage";
+import SEO from "../../components/SEO";
 
 const BlogpostView = () => {
   const { slug } = useParams();
@@ -163,11 +164,25 @@ const BlogpostView = () => {
     <BlogLayout>
       {blogPostData && (
         <>
-          <title>{blogPostData.title}</title>
-          <meta name="description" content={blogPostData.title} />
-          <meta property="og:title" content={blogPostData.title} />
-          <meta property="og:type" content="article" />
-          <meta property="og:image" content={blogPostData.coverImageUrl} />
+          <SEO
+            title={blogPostData.title}
+            description={sanitizeMarkdown(blogPostData.content).substring(
+              0,
+              160
+            )}
+            image={blogPostData.coverImageUrl}
+            url={`/${blogPostData.slug}`}
+            type="article"
+            article={{
+              publishedTime: new Date(blogPostData.createdAt).toISOString(),
+              modifiedTime: new Date(blogPostData.updatedAt).toISOString(),
+              author: blogPostData.author?.name || "Gist Hub",
+              section: blogPostData.tags?.[0] || "Technology",
+              tags: blogPostData.tags,
+            }}
+            keywords={blogPostData.tags}
+            author={blogPostData.author?.name || "Gist Hub"}
+          />
 
           <div className="min-h-screen bg-linear-to-br from-gray-50 via-purple-50/20 to-pink-50/20">
             {/* Hero Section with Side-by-Side Layout */}

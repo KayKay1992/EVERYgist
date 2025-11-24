@@ -1,0 +1,20 @@
+# Gist Hub Robots.txt
+# Allow all crawlers
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://gisthub.com/api/sitemap.xml
+
+# Disallow admin pages
+User-agent: *
+Disallow: /admin/
+
+# Crawl delay
+Crawl-delay: 1
+
+# Block certain bots (optional)
+User-agent: AhrefsBot
+User-agent: SemrushBot
+Crawl-delay: 10

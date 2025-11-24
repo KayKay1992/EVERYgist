@@ -9,6 +9,7 @@ import { LuLoaderCircle, LuGalleryVerticalEnd } from "react-icons/lu";
 import FeaturedBlogPost from "./components/FeaturedBlogPost";
 import BlogPostSummary from "./components/BlogPostSummary";
 import TrendingPostsSection from "./components/TrendingPostsSection";
+import SEO from "../../components/SEO";
 
 const BlogLandingPage = () => {
   const navigate = useNavigate();
@@ -90,6 +91,20 @@ const BlogLandingPage = () => {
 
   return (
     <BlogLayout activeMenu="01">
+      <SEO
+        title="Home"
+        description="Discover insightful articles, tutorials, and stories on Gist Hub - your source for quality content on technology, programming, and more."
+        keywords={[
+          "blog",
+          "articles",
+          "tutorials",
+          "technology",
+          "programming",
+          "web development",
+          "software engineering",
+        ]}
+      />
+
       {/* Infinite Scroll Toggle */}
       <div className="mb-6 flex items-center justify-end">
         <div className="inline-flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm">
