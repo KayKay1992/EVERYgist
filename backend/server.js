@@ -32,7 +32,7 @@ app.set("trust proxy", 1);
 
 // Allowed origins for CORS
 const allowedOrigins = [
-  "https://gisthub-lyac.onrender.com", // Your frontend URL
+  "https://gisthub-xi.vercel.app", // Your frontend URL
   "http://localhost:5173", // Local development
   "http://localhost:3000", // Alternative local port
 ];
