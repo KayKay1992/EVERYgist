@@ -1,5 +1,11 @@
 services:
   - type: web
+    name: gisthub-backend
+    env: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
+    
+  - type: web
     name: gisthub-frontend
     env: static
     buildCommand: cd frontend/gist_hub && npm install && npm run build
