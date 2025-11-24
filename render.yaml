@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: gisthub-frontend
+    env: static
+    buildCommand: cd frontend/gist_hub && npm install && npm run build
+    staticPublishPath: frontend/gist_hub/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
