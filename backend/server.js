@@ -26,10 +26,28 @@ const aiRoutes = require("./routes/aiRoutes");
 const sitemapRoutes = require("./routes/sitemapRoutes");
 
 const app = express();
+
+// Allowed origins for CORS
+const allowedOrigins = [
+  "https://gisthub-lyac.onrender.com", // Your frontend URL
+  "http://localhost:5173", // Local development
+  "http://localhost:3000", // Alternative local port
+];
+
 // Middleware to handle cors issues
 app.use(
   cors({
-    origin: "*", // Allow all origins for simplicity; adjust as needed for security
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true, // Allow credentials (cookies, authorization headers)
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
