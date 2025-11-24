@@ -24,5 +24,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Deployment documentation
+FRONTEND_DEPLOYMENT.md
+
 
 
