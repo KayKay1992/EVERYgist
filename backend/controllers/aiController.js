@@ -91,10 +91,9 @@ const generateBlogPost = async (req, res) => {
     const prompt = `Write a detailed blog post on the topic "${title}" in a "${tone}" tone. Include relevant subheadings, examples, and a conclusion. The content should be engaging and informative. Ensure it is well-structured and easy to read. include an introduction that hooks the reader. Use a variety of sentence structures to maintain interest. The blog post should be approximately 1500-2000 words long. markdown format with appropriate headings and subheadings.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
-    
 
     const rawText = await extractGenAiText(response);
     res.status(200).json(rawText);
@@ -119,7 +118,7 @@ const generatedBlogIdeas = async (req, res) => {
     }
     const prompt = blogPostIdeasPrompt(topics);
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 
@@ -169,7 +168,7 @@ const generateCommentReply = async (req, res) => {
     }
     const prompt = generateReplyPrompt({ author, content });
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 
@@ -196,7 +195,7 @@ const generatePostSummary = async (req, res) => {
     }
     const prompt = postSummaryPrompt(content);
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 
