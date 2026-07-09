@@ -5,6 +5,72 @@ const {
   postSummaryPrompt,
 } = require("../utils/prompt");
 
+const isProduction = process.env.NODE_ENV === "production";
+
+function requireGoogleApiKey(res) {
+  if (!process.env.GOOGLE_API_KEY) {
+    res.status(503).json({
+      message: "AI provider is not configured",
+      error: "Missing GOOGLE_API_KEY",
+    });
+    return false;
+  }
+  return true;
+}
+
+async function extractGenAiText(response) {
+  if (!response) return "";
+
+  try {
+    if (typeof response.text === "function") {
+      const text = await response.text();
+      return typeof text === "string" ? text : "";
+    }
+
+    if (typeof response.text === "string") return response.text;
+
+    const parts =
+      response?.candidates?.[0]?.content?.parts ||
+      response?.response?.candidates?.[0]?.content?.parts ||
+      [];
+    const combined = parts
+      .map((p) => (typeof p?.text === "string" ? p.text : ""))
+      .join("");
+    return combined;
+  } catch {
+    return "";
+  }
+}
+
+function stripCodeFences(text) {
+  if (!text) return "";
+  return String(text)
+    .replace(/^```[a-zA-Z]*\s*/m, "")
+    .replace(/```\s*$/m, "")
+    .trim();
+}
+
+function tryParseJson(text) {
+  try {
+    return { ok: true, value: JSON.parse(text) };
+  } catch (error) {
+    return { ok: false, error };
+  }
+}
+
+function extractJsonSubstring(text, kind) {
+  if (!text) return "";
+  const s = String(text);
+
+  const open = kind === "array" ? "[" : "{";
+  const close = kind === "array" ? "]" : "}";
+
+  const start = s.indexOf(open);
+  const end = s.lastIndexOf(close);
+  if (start === -1 || end === -1 || end <= start) return "";
+  return s.slice(start, end + 1);
+}
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_API_KEY,
 });
@@ -14,6 +80,8 @@ const ai = new GoogleGenAI({
 //@access  Private
 const generateBlogPost = async (req, res) => {
   try {
+    if (!requireGoogleApiKey(res)) return;
+
     const { title, tone } = req.body;
 
     if (!title || !tone) {
@@ -26,8 +94,9 @@ const generateBlogPost = async (req, res) => {
       model: "gemini-2.0-flash-lite",
       contents: prompt,
     });
+    
 
-    let rawText = response.text || "";
+    const rawText = await extractGenAiText(response);
     res.status(200).json(rawText);
   } catch (error) {
     res
@@ -41,6 +110,8 @@ const generateBlogPost = async (req, res) => {
 //@access  Private
 const generatedBlogIdeas = async (req, res) => {
   try {
+    if (!requireGoogleApiKey(res)) return;
+
     const { topics } = req.body;
 
     if (!topics) {
@@ -52,16 +123,30 @@ const generatedBlogIdeas = async (req, res) => {
       contents: prompt,
     });
 
-    let rawText = response.text || "";
+    const rawText = await extractGenAiText(response);
+    const cleanedText = stripCodeFences(rawText);
 
-    //clean text
-    const cleanedText = rawText
-      .replace(/^```json\s*/, "")
-      .replace(/```$/, "")
-      .trim();
+    const direct = tryParseJson(cleanedText);
+    if (!direct.ok) {
+      const extracted = extractJsonSubstring(cleanedText, "array");
+      const extractedParsed = extracted ? tryParseJson(extracted) : null;
+      if (!extractedParsed?.ok) {
+        return res.status(502).json({
+          message: "AI provider returned invalid JSON",
+          error: "Failed to parse blog ideas JSON",
+          details: isProduction
+            ? undefined
+            : {
+                parseError: String(direct.error?.message || direct.error),
+                rawPreview: String(rawText || "").slice(0, 800),
+              },
+        });
+      }
 
-    //safe to parse
-    const ideas = JSON.parse(cleanedText);
+      return res.status(200).json(extractedParsed.value);
+    }
+
+    const ideas = direct.value;
     res.status(200).json(ideas);
   } catch (error) {
     res
@@ -75,6 +160,8 @@ const generatedBlogIdeas = async (req, res) => {
 //@access  Private
 const generateCommentReply = async (req, res) => {
   try {
+    if (!requireGoogleApiKey(res)) return;
+
     const { author, content } = req.body;
 
     if (!content) {
@@ -85,7 +172,8 @@ const generateCommentReply = async (req, res) => {
       model: "gemini-2.0-flash-lite",
       contents: prompt,
     });
-    let rawText = response.text || "";
+
+    const rawText = await extractGenAiText(response);
     res.status(200).json(rawText);
   } catch (error) {
     res.status(500).json({
@@ -100,6 +188,8 @@ const generateCommentReply = async (req, res) => {
 //@access  Private
 const generatePostSummary = async (req, res) => {
   try {
+    if (!requireGoogleApiKey(res)) return;
+
     const { content } = req.body;
     if (!content) {
       return res.status(400).json({ message: "Post content is required" });
@@ -109,16 +199,30 @@ const generatePostSummary = async (req, res) => {
       model: "gemini-2.0-flash-lite",
       contents: prompt,
     });
-    let rawText = response.text || "";
 
-    //clean and remove  ```json and ``` from beginning and end
-    const cleanedText = rawText
-      .replace(/^```json\s*/, "")
-      .replace(/```$/, "")
-      .trim();
+    const rawText = await extractGenAiText(response);
+    const cleanedText = stripCodeFences(rawText);
 
-    //safe to parse
-    const data = JSON.parse(cleanedText);
+    const direct = tryParseJson(cleanedText);
+    if (!direct.ok) {
+      const extracted = extractJsonSubstring(cleanedText, "object");
+      const extractedParsed = extracted ? tryParseJson(extracted) : null;
+      if (!extractedParsed?.ok) {
+        return res.status(502).json({
+          message: "AI provider returned invalid JSON",
+          error: "Failed to parse post summary JSON",
+          details: isProduction
+            ? undefined
+            : {
+                parseError: String(direct.error?.message || direct.error),
+                rawPreview: String(rawText || "").slice(0, 800),
+              },
+        });
+      }
+      return res.status(200).json(extractedParsed.value);
+    }
+
+    const data = direct.value;
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({
